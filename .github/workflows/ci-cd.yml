@@ -43,10 +43,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Finitech.sln
+
+      - name: Build
+        run: dotnet build tests/Finitech.ArchitectureTests/Finitech.ArchitectureTests.csproj --no-restore
 
       - name: Run Architecture Tests
-        run: dotnet test tests/Finitech.ArchitectureTests/Finitech.ArchitectureTests.csproj --verbosity normal
+        run: dotnet test tests/Finitech.ArchitectureTests/Finitech.ArchitectureTests.csproj --no-build --verbosity normal
 
   security-scan:
     runs-on: ubuntu-latest
@@ -64,7 +67,7 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
 

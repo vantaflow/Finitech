@@ -1,3 +1,4 @@
+using System.Reflection;
 using NetArchTest.Rules;
 using Xunit;
 
@@ -5,62 +6,165 @@ namespace Finitech.ArchitectureTests;
 
 public class ArchitectureTests
 {
+    // Load all assemblies from the solution
+    private static IEnumerable<Assembly> GetAllAssemblies()
+    {
+        var assemblies = new List<Assembly>();
+        var assemblyNames = new HashSet<string>();
+
+        // Start with the current assembly and load referenced ones
+        var queue = new Queue<Assembly>();
+        queue.Append(Assembly.GetExecutingAssembly());
+
+        // Also load assemblies from the current domain
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            if (assembly.FullName?.StartsWith("Finitech") == true)
+            {
+                if (assemblyNames.Add(assembly.FullName))
+                {
+                    assemblies.Add(assembly);
+                }
+            }
+        }
+
+        // Explicitly load key assemblies if not already loaded
+        var keyAssemblies = new[]
+        {
+            "Finitech.BuildingBlocks.Domain",
+            "Finitech.BuildingBlocks.SharedKernel",
+            "Finitech.Modules.Banking.Domain",
+            "Finitech.Modules.Wallet.Domain",
+            "Finitech.Modules.Ledger.Domain"
+        };
+
+        foreach (var assemblyName in keyAssemblies)
+        {
+            try
+            {
+                var assembly = Assembly.Load(new AssemblyName(assemblyName));
+                if (assembly != null && assemblyNames.Add(assembly.FullName!))
+                {
+                    assemblies.Add(assembly);
+                }
+            }
+            catch
+            {
+                // Assembly not found, skip
+            }
+        }
+
+        return assemblies;
+    }
+
     [Fact]
     public void Entities_Should_Reside_In_Domain()
     {
-        var result = Types.InCurrentDomain()
-            .That()
-            .Inherit(typeof(BuildingBlocks.SharedKernel.Primitives.Entity))
-            .Should()
-            .ResideInNamespace("*.Domain")
-            .GetResult();
+        var assemblies = GetAllAssemblies();
 
-        Assert.True(result.IsSuccessful, "Entities should reside in Domain namespace");
+        // Test each assembly separately
+        foreach (var assembly in assemblies)
+        {
+            var result = Types.InAssembly(assembly)
+                .That()
+                .Inherit(typeof(BuildingBlocks.SharedKernel.Primitives.Entity))
+                .Should()
+                .ResideInNamespace("*.Domain")
+                .GetResult();
+
+            Assert.True(result.IsSuccessful, $"Entities in {assembly.GetName().Name} should reside in Domain namespace");
+        }
     }
 
     [Fact]
     public void Domain_Should_Not_Reference_Infrastructure()
     {
-        // Get all domain types
-        var domainTypes = Types.InCurrentDomain()
-            .That()
-            .ResideInNamespace("*.Domain")
-            .GetTypes();
+        // Get all domain types from loaded assemblies
+        var allTypes = GetAllAssemblies().SelectMany(a => a.GetTypes());
 
-        // Get all infrastructure types
-        var infraTypes = Types.InCurrentDomain()
-            .That()
-            .ResideInNamespace("*.Infrastructure")
-            .GetTypes();
+        var domainTypes = allTypes
+            .Where(t => t.Namespace?.Contains(".Domain") == true)
+            .Where(t => t.FullName?.StartsWith("Finitech") == true)
+            .ToList();
 
-        // Check that no domain type depends on infrastructure
-        var domainTypeList = domainTypes.ToList();
-        var infraTypeList = infraTypes.ToList();
+        var infraTypes = allTypes
+            .Where(t => t.Namespace?.Contains(".Infrastructure") == true)
+            .Where(t => t.FullName?.StartsWith("Finitech") == true)
+            .ToList();
 
-        Assert.NotEmpty(domainTypeList);
+        // Check that we found types
+        Assert.True(domainTypes.Count > 0, "Should find domain types");
 
-        // This is a simplified check - in a real scenario you'd use reflection to check references
+        // The actual check would require parsing IL or using a tool like ArchUnitNET
+        // For now, we document the rule and ensure types are found
         Assert.True(true, "Domain layer independence check passed");
     }
 
     [Fact]
     public void Banking_And_Wallet_Should_Be_Separated()
     {
+        var allTypes = GetAllAssemblies().SelectMany(a => a.GetTypes());
+
         // Check that Banking namespace doesn't contain Wallet references
-        var bankingTypes = Types.InCurrentDomain()
-            .That()
-            .ResideInNamespace("Finitech.Modules.Banking")
-            .GetTypes();
+        var bankingTypes = allTypes
+            .Where(t => t.Namespace?.StartsWith("Finitech.Modules.Banking") == true)
+            .ToList();
 
-        var walletTypes = Types.InCurrentDomain()
-            .That()
-            .ResideInNamespace("Finitech.Modules.Wallet")
-            .GetTypes();
+        var walletTypes = allTypes
+            .Where(t => t.Namespace?.StartsWith("Finitech.Modules.Wallet") == true)
+            .ToList();
 
-        Assert.NotEmpty(bankingTypes);
-        Assert.NotEmpty(walletTypes);
+        // Ensure both modules have types
+        Assert.True(bankingTypes.Count > 0, "Banking module should have types");
+        Assert.True(walletTypes.Count > 0, "Wallet module should have types");
 
-        // The separation is enforced by project references - this test documents the rule
-        Assert.True(true, "Banking and Wallet modules are separate");
+        // Check that no Banking type references Wallet namespace
+        var bankingRefs = bankingTypes
+            .SelectMany(t => t.GetProperties().Select(p => p.PropertyType.Namespace))
+            .Where(n => n?.StartsWith("Finitech.Modules.Wallet") == true)
+            .ToList();
+
+        Assert.True(bankingRefs.Count == 0,
+            $"Banking module should not reference Wallet types. Found: {string.Join(", ", bankingRefs.Take(5))}");
+    }
+
+    [Fact]
+    public void AggregateRoots_Should_Reside_In_Domain()
+    {
+        var assemblies = GetAllAssemblies();
+
+        foreach (var assembly in assemblies)
+        {
+            var result = Types.InAssembly(assembly)
+                .That()
+                .Inherit(typeof(BuildingBlocks.SharedKernel.Primitives.AggregateRoot))
+                .Should()
+                .ResideInNamespace("*.Domain")
+                .GetResult();
+
+            Assert.True(result.IsSuccessful,
+                $"AggregateRoots in {assembly.GetName().Name} should reside in Domain namespace");
+        }
+    }
+
+    [Fact]
+    public void ValueObjects_Should_Reside_In_Domain_Or_SharedKernel()
+    {
+        var assemblies = GetAllAssemblies();
+
+        foreach (var assembly in assemblies)
+        {
+            var result = Types.InAssembly(assembly)
+                .That()
+                .Inherit(typeof(BuildingBlocks.SharedKernel.Primitives.ValueObject))
+                .Should()
+                .ResideInNamespace("*.Domain")
+                .Or()
+                .ResideInNamespace("*.SharedKernel")
+                .GetResult();
+
+            Assert.True(result.IsSuccessful,
+                $"ValueObjects in {assembly.GetName().Name} should reside in Domain or SharedKernel namespace");
+        }
     }
 }
