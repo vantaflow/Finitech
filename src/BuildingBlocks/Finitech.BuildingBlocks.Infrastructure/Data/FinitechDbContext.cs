@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Finitech.BuildingBlocks.Domain.Outbox;
 using Finitech.BuildingBlocks.Domain.Repositories;
 using Finitech.BuildingBlocks.SharedKernel.Primitives;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +16,8 @@ public abstract class FinitechDbContext : DbContext, IUnitOfWork
     {
     }
 
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
     public bool HasActiveTransaction => _currentTransaction != null;
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -25,9 +29,32 @@ public abstract class FinitechDbContext : DbContext, IUnitOfWork
             .Select(e => e.Entity)
             .ToList();
 
+        var domainEvents = entitiesWithEvents
+            .SelectMany(e => e.DomainEvents)
+            .ToList();
+
+        // Add domain events to Outbox for reliable publishing
+        foreach (var domainEvent in domainEvents)
+        {
+            var outboxMessage = new OutboxMessage
+            {
+                Id = Guid.NewGuid(),
+                EventType = domainEvent.EventType,
+                Payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                }),
+                OccurredAt = domainEvent.OccurredAt,
+                Status = OutboxMessageStatus.Pending,
+                CorrelationId = GetCorrelationId()
+            };
+
+            OutboxMessages.Add(outboxMessage);
+        }
+
+        // Clear events from aggregates
         foreach (var entity in entitiesWithEvents)
         {
-            _domainEvents.AddRange(entity.DomainEvents);
             entity.ClearDomainEvents();
         }
 
@@ -43,6 +70,16 @@ public abstract class FinitechDbContext : DbContext, IUnitOfWork
             // Handle concurrency conflicts
             throw new ConcurrencyException("A concurrency conflict occurred.", ex);
         }
+    }
+
+    /// <summary>
+    /// Gets the correlation ID from the current request context, if available.
+    /// </summary>
+    protected virtual string? GetCorrelationId()
+    {
+        // This can be overridden in derived classes to get correlation ID from HTTP context
+        // or other request-scoped services
+        return null;
     }
 
     public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)

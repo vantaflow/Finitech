@@ -1,3 +1,4 @@
+using Finitech.BuildingBlocks.Domain.Outbox;
 using Finitech.BuildingBlocks.Infrastructure.Data;
 using Finitech.Modules.Ledger.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -115,6 +116,42 @@ public class LedgerDbContext : FinitechDbContext
             // Unique constraint: one balance per account per currency
             entity.HasIndex(e => new { e.AccountId, e.CurrencyCode })
                 .IsUnique();
+        });
+
+        // OutboxMessages configuration
+        modelBuilder.Entity<OutboxMessage>(entity =>
+        {
+            entity.ToTable("OutboxMessages", "ledger");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(e => e.EventType)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(e => e.Payload)
+                .IsRequired()
+                .HasColumnType("nvarchar(max)");
+
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue(OutboxMessageStatus.Pending);
+
+            entity.Property(e => e.Error)
+                .HasMaxLength(2000);
+
+            entity.Property(e => e.CorrelationId)
+                .HasMaxLength(100);
+
+            // Index for querying pending messages
+            entity.HasIndex(e => new { e.Status, e.OccurredAt });
+
+            // Index for querying by retry count
+            entity.HasIndex(e => new { e.Status, e.RetryCount, e.OccurredAt });
         });
     }
 }

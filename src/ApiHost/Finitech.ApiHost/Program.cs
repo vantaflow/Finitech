@@ -4,6 +4,9 @@ using Finitech.ApiHost.Services;
 using Finitech.Modules.Ledger.Infrastructure;
 using Serilog;
 
+// Make Outbox background services available
+using Finitech.BuildingBlocks.Infrastructure.Outbox;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog

@@ -1,4 +1,5 @@
 using Finitech.BuildingBlocks.SharedKernel.Primitives;
+using Finitech.Modules.Ledger.Domain.Events;
 
 namespace Finitech.Modules.Ledger.Domain;
 
@@ -36,7 +37,7 @@ public class LedgerEntry : AggregateRoot
             ? previousBalance + amountMinorUnits
             : previousBalance - amountMinorUnits;
 
-        return new LedgerEntry
+        var entry = new LedgerEntry
         {
             Id = Guid.NewGuid(),
             AccountId = accountId,
@@ -49,6 +50,18 @@ public class LedgerEntry : AggregateRoot
             RunningBalance = runningBalance,
             IdempotencyKey = idempotencyKey
         };
+
+        // Raise domain event for outbox pattern
+        entry.AddDomainEvent(new LedgerEntryCreatedEvent(
+            entry.Id,
+            entry.AccountId,
+            entry.CurrencyCode,
+            entry.AmountMinorUnits,
+            entry.EntryType.ToString(),
+            entry.RunningBalance,
+            entry.Reference));
+
+        return entry;
     }
 
     public static LedgerEntry CreateVoid(
@@ -73,6 +86,13 @@ public class LedgerEntry : AggregateRoot
                 ? -originalEntry.AmountMinorUnits
                 : originalEntry.AmountMinorUnits)
         };
+
+        // Raise domain event
+        voidEntry.AddDomainEvent(new LedgerEntryVoidedEvent(
+            originalEntry.Id,
+            voidEntry.Id,
+            voidEntry.AccountId,
+            reason));
 
         return voidEntry;
     }

@@ -1,3 +1,5 @@
+using Finitech.BuildingBlocks.Domain.Outbox;
+using Finitech.BuildingBlocks.Infrastructure.Outbox;
 using Finitech.Modules.Ledger.Contracts;
 using Finitech.Modules.Ledger.Infrastructure.Data;
 using Finitech.Modules.Ledger.Infrastructure.Repositories;
@@ -48,6 +50,11 @@ public static class DependencyInjection
 
         // Services
         services.AddScoped<Finitech.Modules.Ledger.Contracts.ILedgerService, LedgerService>();
+
+        // Outbox Pattern
+        services.AddScoped<IOutbox, EfOutbox<LedgerDbContext>>();
+        services.AddSingleton<IEventPublisher, InMemoryEventPublisher>();
+        services.AddHostedService<OutboxProcessorService<LedgerDbContext>>();
 
         return services;
     }

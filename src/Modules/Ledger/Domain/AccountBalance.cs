@@ -34,9 +34,17 @@ public class AccountBalance : AggregateRoot
         if (amountMinorUnits <= 0)
             throw new ArgumentException("Credit amount must be positive", nameof(amountMinorUnits));
 
+        var previousBalance = BalanceMinorUnits;
         BalanceMinorUnits += amountMinorUnits;
         LastUpdatedAt = DateTime.UtcNow;
         Version++;
+
+        AddDomainEvent(new Events.AccountBalanceUpdatedEvent(
+            AccountId,
+            CurrencyCode,
+            previousBalance,
+            BalanceMinorUnits,
+            amountMinorUnits));
     }
 
     public void Debit(long amountMinorUnits)
@@ -47,9 +55,17 @@ public class AccountBalance : AggregateRoot
         if (amountMinorUnits > BalanceMinorUnits)
             throw new InvalidOperationException("Insufficient balance");
 
+        var previousBalance = BalanceMinorUnits;
         BalanceMinorUnits -= amountMinorUnits;
         LastUpdatedAt = DateTime.UtcNow;
         Version++;
+
+        AddDomainEvent(new Events.AccountBalanceUpdatedEvent(
+            AccountId,
+            CurrencyCode,
+            previousBalance,
+            BalanceMinorUnits,
+            -amountMinorUnits));
     }
 
     public void Reserve(long amountMinorUnits)
