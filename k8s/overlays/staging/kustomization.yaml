@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: staging
+
+resources:
+  - ../../base
+
+namePrefix: staging-
+
+commonLabels:
+  environment: staging
+
+replicas:
+  - name: finitech-api
+    count: 2
+
+images:
+  - name: ghcr.io/finitech/api
+    newTag: develop
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+
+configMapGenerator:
+  - name: finitech-config
+    behavior: merge
+    literals:
+      - ASPNETCORE_ENVIRONMENT=Staging
+
+secretGenerator:
+  - name: finitech-secrets
+    type: Opaque
+    literals:
+      - connection-string=Server=staging-sql-server;Database=Finitech;User Id=sa;Password=staging-password;Encrypt=True;TrustServerCertificate=True
+      - jwt-key=staging-jwt-key-must-be-at-least-32-characters

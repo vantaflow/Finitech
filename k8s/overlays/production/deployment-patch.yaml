@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finitech-api
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+        - name: api
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "1000m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring:4317"
+            - name: Tracing__SampleRate
+              value: "0.1"

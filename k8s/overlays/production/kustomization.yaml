@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: production
+
+resources:
+  - ../../base
+
+namePrefix: prod-
+
+commonLabels:
+  environment: production
+
+replicas:
+  - name: finitech-api
+    count: 5
+
+images:
+  - name: ghcr.io/finitech/api
+    newTag: v1.0.0
+
+configMapGenerator:
+  - name: finitech-config
+    behavior: merge
+    literals:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - ingress-patch.yaml
+
+secretGenerator:
+  - name: finitech-secrets
+    type: Opaque
+    literals:
+      - connection-string=Server=prod-sql-server;Database=Finitech;User Id=sa;Password=prod-password;Encrypt=True;TrustServerCertificate=True
+      - jwt-key=production-jwt-key-must-be-at-least-32-characters

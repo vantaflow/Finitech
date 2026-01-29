@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="8.0.0" />
+    <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.20" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.7.0-rc.1" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.4" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.7.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="2.3.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="6.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\Finitech.BuildingBlocks.Domain\Finitech.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\Finitech.BuildingBlocks.SharedKernel\Finitech.BuildingBlocks.SharedKernel.csproj" />
+
+    <!-- Module Contracts -->
+    <ProjectReference Include="..\..\Modules\PartyRegistry\Contracts\Finitech.Modules.PartyRegistry.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Finitech.Modules.IdentityAccess.Contracts\Finitech.Modules.IdentityAccess.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\IdentityCompliance\Contracts\Finitech.Modules.IdentityCompliance.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\BranchNetwork\Contracts\Finitech.Modules.BranchNetwork.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Ledger\Contracts\Finitech.Modules.Ledger.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\FX\Contracts\Finitech.Modules.FX.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Contracts\Finitech.Modules.Payments.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Statements\Contracts\Finitech.Modules.Statements.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\MerchantPayments\Contracts\Finitech.Modules.MerchantPayments.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Disputes\Contracts\Finitech.Modules.Disputes.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Notifications\Contracts\Finitech.Modules.Notifications.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Documents\Contracts\Finitech.Modules.Documents.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Budgeting\Contracts\Finitech.Modules.Budgeting.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Audit\Contracts\Finitech.Modules.Audit.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Scheduler\Contracts\Finitech.Modules.Scheduler.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Wallet\Contracts\Finitech.Modules.Wallet.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\WalletFMCG\Contracts\Finitech.Modules.WalletFMCG.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Banking\Contracts\Finitech.Modules.Banking.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Ledger\Infrastructure\Finitech.Modules.Ledger.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
