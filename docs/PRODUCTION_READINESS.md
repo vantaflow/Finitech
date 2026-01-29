@@ -8,18 +8,40 @@ Cette documentation décrit les améliorations apportées pour rendre la solutio
 
 ## 1. Entity Framework Core avec SQL Server
 
-### Base de données
-- **DbContext de base** : `FinitechDbContext` dans `BuildingBlocks.Infrastructure`
-  - Gestion des domain events
-  - Audit automatique (CreatedAt, UpdatedAt)
-  - Gestion des transactions
-  - Retry logic avec exponential backoff
+### Modules avec Persistence Implémentée
 
-### Module Ledger (Exemple implémenté)
-- **LedgerDbContext** : DbContext spécifique au module Ledger
-- **Entités** : `LedgerEntry`, `AccountBalance` (maintenant des AggregateRoots)
-- **Repositories** : `LedgerEntryRepository`, `AccountBalanceRepository`
-- **Service** : `LedgerService` avec implémentation réelle utilisant EF Core
+#### Identity Module
+- **IdentityDbContext** : Users, RefreshTokens, UserSessions, Roles, Permissions
+- **Sécurité** : Password hashing Argon2id, Encryption AES-256-GCM
+- **Schéma** : `identity`
+
+#### Banking Module
+- **BankingDbContext** : BankAccounts, Cards, Loans
+- **PCI Compliance** : Card tokenization
+- **Schéma** : `banking`
+
+#### Wallet Module
+- **WalletDbContext** : WalletAccounts, WalletBalances, WalletTransactions, ScheduledPayments
+- **P2P** : Transfers et scheduled payments
+- **Schéma** : `wallet`
+
+#### Ledger Module
+- **LedgerDbContext** : LedgerEntry, AccountBalance, OutboxMessages
+- **Double-entry bookkeeping** : Immutable ledger
+- **Outbox Pattern** : Reliable messaging
+- **Schéma** : `ledger`
+
+### Configuration Connection Strings
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=...;TrustServerCertificate=True",
+    "IdentityConnection": "...",
+    "BankingConnection": "...",
+    "WalletConnection": "..."
+  }
+}
+```
 
 ### Configuration
 ```json
@@ -34,27 +56,36 @@ Cette documentation décrit les améliorations apportées pour rendre la solutio
 
 ## 2. Sécurité Production
 
-### Authentification JWT
-- Configuration complète dans `SecurityConfig.cs`
-- Refresh token rotation
-- Token revocation support
-- Claims-based authorization
+### Authentification JWT avec RSA-2048
+- **Signing** : RSA-2048 key pairs (stockés sur disque/dev, HSM en prod)
+- **Access tokens** : 15 minutes
+- **Refresh tokens** : 7 jours avec rotation et revocation
+- **Claims** : Roles, Permissions, UserId
+- **Configuration** : `JwtService` dans `BuildingBlocks.Infrastructure`
+
+### Password Hashing (Argon2id)
+- **Algorithm** : Argon2id (OWASP recommended)
+- **Parameters** : m=65536 (64MB), t=3, p=4
+- **Salt** : Unique par utilisateur, 128 bits
+- **Verification** : Constant-time comparison
+- **Migration support** : Compatible avec PBKDF2 pour migration
+
+### Data Encryption (AES-256-GCM)
+- **Algorithm** : AES-256-GCM (AEAD)
+- **Key rotation** : Supporté avec key versioning
+- **PII encryption** : Email, PhoneNumber, NationalId
+- **Blind indexing** : Pour recherche sur données chiffrées
 
 ### Rate Limiting
-- Rate limiting global : 100 requêtes/minute
-- Rate limiting auth : 5 requêtes/5 minutes (endpoints sensibles)
-- Rate limiting payments : 10 requêtes/minute
+- **Global** : 100 requêtes/minute
+- **Auth endpoints** : 5 requêtes/5 minutes (login, register)
+- **Payments** : 10 requêtes/minute
+- **IP Whitelist** : Admin endpoints restreints
 
-### CORS
-- Configuration stricte pour production
-- Origines whitelistées : `https://app.finitech.ma`, `https://admin.finitech.ma`
-
-### Security Headers
-- `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: DENY`
-- `X-XSS-Protection: 1; mode=block`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `Content-Security-Policy` configuré
+### CORS et Security Headers
+- CORS strict pour origines whitelistées
+- Security headers : CSP, HSTS, X-Frame-Options, X-Content-Type-Options
+- HTTPS enforcement en production
 
 ---
 
@@ -82,7 +113,87 @@ Cette documentation décrit les améliorations apportées pour rendre la solutio
 
 ---
 
-## 4. CI/CD Pipeline GitHub Actions
+## 4. Background Jobs (Quartz.NET)
+
+### Jobs Planifiés
+
+#### InterestAccrualJob
+- **Schedule** : Tous les jours à 2:00 AM
+- **Module** : Ledger
+- **Action** : Calcul et application des intérêts sur comptes épargne
+
+#### ScheduledPaymentJob
+- **Schedule** : Toutes les 15 minutes
+- **Module** : Wallet
+- **Action** : Exécution des paiements programmés (standing orders)
+
+#### TokenCleanupJob
+- **Schedule** : Tous les jours à 3:00 AM
+- **Module** : Identity
+- **Action** : Nettoyage des refresh tokens et sessions expirés
+
+### Configuration
+```csharp
+services.AddQuartz(q => {
+    q.AddJob<InterestAccrualJob>(...)
+     .AddTrigger(...)
+});
+services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+```
+
+---
+
+## 5. Intégrations Externes (Mocks)
+
+### Interfaces prêtes pour production
+
+#### SMS Service (ISmsService)
+- **Mock** : Console output
+- **Production** : Twilio
+
+#### Email Service (IEmailService)
+- **Mock** : Console output
+- **Production** : SendGrid
+
+#### KYC Provider (IKycProvider)
+- **Mock** : Réponses simulées
+- **Production** : Jumio, Onfido, SumSub
+
+#### Payment Gateway (IPaymentGateway)
+- **Mock** : Réponses simulées
+- **Production** : Stripe, Adyen
+
+#### FX Rate Provider (IFxRateProvider)
+- **Mock** : Taux fixes
+- **Production** : XE, Fixer.io, ECB
+- **Cache** : 5 minutes (MemoryCache)
+
+#### Document Storage (IDocumentStorage)
+- **Mock** : Système de fichiers local
+- **Production** : AWS S3, Azure Blob
+- **Features** : Presigned URLs (15 min expiry)
+
+---
+
+## 6. MFA/2FA et PCI Compliance
+
+### MFA Service (IMfaService)
+- **TOTP** : Compatible Google Authenticator, Microsoft Authenticator
+- **QR Code** : Génération pour setup
+- **Validation** : Time-based avec fenêtre de tolérance
+
+### Recovery Codes
+- **Génération** : 10 codes à usage unique
+- **Stockage** : Hashés (même sécurité que passwords)
+
+### Card Tokenization (ICardTokenizationService)
+- **PCI DSS compliant** : PAN jamais stocké en clair
+- **Format-preserving tokens** : Même format que la carte originale
+- **Luhn validation** : Vérification des numéros de carte
+
+---
+
+## 7. CI/CD Pipeline GitHub Actions
 
 ### Workflows (`.github/workflows/ci-cd.yml`)
 
@@ -101,7 +212,7 @@ Cette documentation décrit les améliorations apportées pour rendre la solutio
 
 ---
 
-## 5. Kubernetes Manifests
+## 8. Kubernetes Manifests
 
 ### Structure Kustomize
 ```
@@ -145,7 +256,7 @@ k8s/
 
 ---
 
-## 6. Configuration Applications
+## 9. Configuration Applications
 
 ### appsettings.json
 ```json
@@ -175,7 +286,7 @@ k8s/
 
 ---
 
-## 7. Docker
+## 10. Docker
 
 ### Dockerfile
 - Multi-stage build (build, publish, final)
@@ -190,20 +301,29 @@ k8s/
 
 ---
 
-## 8. Prochaines Étapes pour Production
+## 11. Prochaines Étapes pour Production
 
 ### Base de données
+- [x] EF Core DbContext par module (Identity, Banking, Wallet, Ledger)
 - [ ] Créer les migrations initiales : `dotnet ef migrations add InitialCreate`
 - [ ] Appliquer les migrations : `dotnet ef database update`
 - [ ] Configurer SQL Server Always Encrypted pour les données sensibles
 - [ ] Mettre en place des backups automatisés
 
 ### Sécurité
+- [x] JWT avec RSA signing
+- [x] Argon2id password hashing
+- [x] AES-256-GCM data encryption
 - [ ] Remplacer la clé JWT par un secret Azure Key Vault / AWS Secrets Manager
 - [ ] Configurer HTTPS avec certificats valides
 - [ ] Mettre en place un WAF (Cloudflare, AWS WAF)
 
+### Background Jobs
+- [x] Quartz.NET scheduler configuré
+- [ ] Persistance Quartz (SQL Server) pour cluster support
+
 ### Monitoring
+- [x] OpenTelemetry tracing et metrics
 - [ ] Déployer OTel Collector dans le cluster
 - [ ] Configurer Grafana pour les dashboards
 - [ ] Mettre en place des alertes (PagerDuty, Slack)
@@ -216,7 +336,7 @@ k8s/
 
 ---
 
-## Commandes Utiles
+## 12. Commandes Utiles
 
 ### Local Development
 ```bash
@@ -261,7 +381,7 @@ dotnet ef database update \
 
 ---
 
-## Architecture de Déploiement
+## 13. Architecture de Déploiement
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -306,7 +426,7 @@ dotnet ef database update \
 
 ---
 
-## Notes Importantes
+## 14. Notes Importantes
 
 1. **Secrets** : Ne jamais committer les secrets dans Git. Utiliser :
    - Kubernetes Secrets

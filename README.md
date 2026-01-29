@@ -98,9 +98,13 @@ Nous avons choisi l'approche **Modular Monolith** pour les raisons suivantes:
 - **.NET 8.0**
 - **SQL Server 2022** (Docker pour dev)
 - **Entity Framework Core** + Migrations
-- **JWT Authentication**
+- **JWT Authentication** avec RSA-2048 signing
+- **Argon2id** Password Hashing (OWASP)
+- **AES-256-GCM** Data Encryption
+- **Quartz.NET** Background Jobs
 - **OpenAPI/Swagger**
 - **xUnit** pour les tests
+- **OpenTelemetry** Observabilité
 
 ## Démarrage Rapide
 
@@ -593,13 +597,24 @@ Les tests d'architecture vérifient:
     }
   },
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True"
+    "DefaultConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True",
+    "IdentityConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True",
+    "BankingConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True",
+    "WalletConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True"
   },
   "Jwt": {
-    "Key": "your-super-secret-key-min-32-characters-long-for-jwt-tokens",
     "Issuer": "Finitech",
-    "Audience": "FinitechApi",
-    "ExpiryHours": 8
+    "Audience": "Finitech.Users",
+    "AccessTokenLifetimeMinutes": 15,
+    "RefreshTokenLifetimeDays": 7
+  },
+  "Encryption": {
+    "MasterKey": "your-32-byte-encryption-key-here!!"
+  },
+  "RateLimiting": {
+    "GlobalLimit": 100,
+    "AuthLimit": 5,
+    "AuthWindow": 5
   }
 }
 ```
@@ -613,25 +628,68 @@ Le système supporte MAD, EUR, USD dès la V1:
 - **Ledger**: Une écriture par devise, pas de conversion implicite
 - **EMVCo QR**: Devise numérique ISO 4217 (504=MAD, 978=EUR, 840=USD)
 
+## Fonctionnalités Production-Ready
+
+### ✅ Sécurité Entreprise
+- **JWT Authentication** avec signing RSA-2048
+- **Access tokens** (15 min) + **Refresh tokens** (7 jours) avec rotation
+- **Argon2id** password hashing (OWASP recommended)
+- **AES-256-GCM** encryption pour données sensibles (PII)
+- **Rate limiting**: 100 req/min global, 5 req/5min auth endpoints
+- **Security headers**: CSP, HSTS, X-Frame-Options, etc.
+
+### ✅ Persistence Database
+- **Identity Module**: Users, RefreshTokens, Sessions, Roles, Permissions (EF Core + SQL Server)
+- **Banking Module**: BankAccounts, Cards, Loans avec schéma isolation
+- **Wallet Module**: Wallets, Balances, Transactions, ScheduledPayments
+- **Ledger Module**: Double-entry bookkeeping avec Outbox Pattern
+- **Multi-tenancy ready**: Schémas séparés par module
+
+### ✅ Background Jobs (Quartz.NET)
+- **InterestAccrualJob**: Calcul intérêts quotidien à 2h du matin
+- **ScheduledPaymentJob**: Exécution paiements programmés (toutes les 15 min)
+- **TokenCleanupJob**: Nettoyage tokens expirés à 3h du matin
+
+### ✅ Intégrations Externes (Mocks prêts pour prod)
+- **SMS Service**: Interface Twilio (mock pour dev)
+- **Email Service**: Interface SendGrid (mock pour dev)
+- **KYC Provider**: Interface Jumio/Onfido (mock pour dev)
+- **Payment Gateway**: Interface Stripe/Adyen (mock pour dev)
+- **FX Rate Provider**: Avec cache 5 minutes (mock taux ECB)
+- **Document Storage**: S3 avec presigned URLs (local pour dev)
+
+### ✅ MFA/2FA & PCI Compliance
+- **TOTP MFA**: Compatible Google/Microsoft Authenticator
+- **Recovery codes**: Génération et validation
+- **Card Tokenization**: PAN tokenization PCI-compliant
+- **Virtual cards**: Support cartes virtuelles
+
 ## Hypothèses et Simplifications
 
-1. **Authentification**: JWT simplifié (pas de refresh token rotation)
-2. **Stockage**: In-memory pour la démo (à remplacer par EF Core + SQL Server)
-3. **FX Rates**: Taux fixes simulés (à remplacer par fournisseur externe)
-4. **Notifications**: Console output (à remplacer par fournisseurs SMS/Email)
-5. **EMVCo QR**: Payload simplifié (pas de CRC réel)
-6. **Idempotence**: Clé en mémoire (à remplacer par table dédiée)
+1. **FX Rates**: Taux simulés (fournisseur externe ready)
+2. **EMVCo QR**: Payload simplifié (CRC basique)
+3. **Notifications**: Mock console (fournisseurs ready)
 
 ## Roadmap Production
 
-1. Implémenter EF Core DbContext par module
-2. Ajouter messaging (RabbitMQ/Azure Service Bus) pour outbox
-3. Implémenter vrais providers KYC/KYB (Jumio, Onfido)
-4. Intégrer fournisseur FX (XE, Fixer)
-5. Ajouter fournisseurs SMS/Email (Twilio, SendGrid)
-6. Implémenter event sourcing pour le Ledger
-7. Ajouter monitoring (Prometheus, Grafana)
-8. Déployer sur Kubernetes
+### ✅ Complété
+- [x] EF Core DbContext par module (Identity, Banking, Wallet, Ledger)
+- [x] JWT Authentication avec RSA signing + refresh tokens
+- [x] Argon2id password hashing
+- [x] AES-256-GCM data encryption
+- [x] Background jobs (Quartz.NET)
+- [x] Interfaces providers KYC/KYB/Payment/FX prêtes
+- [x] MFA/2FA avec TOTP
+- [x] Card tokenization PCI-compliant
+- [x] Monitoring (OpenTelemetry + Prometheus)
+- [x] CI/CD GitHub Actions + Docker
+
+### 🔄 À venir
+- [ ] Event sourcing pour le Ledger
+- [ ] RabbitMQ/Azure Service Bus pour outbox distribué
+- [ ] Déploiement Kubernetes avec Helm charts
+- [ ] API Gateway (Kong/Traefik)
+- [ ] Multi-région support
 
 ## Licence
 

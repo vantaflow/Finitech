@@ -16,7 +16,8 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(find:*)",
-      "Bash(gh workflow list:*)"
+      "Bash(gh workflow list:*)",
+      "Bash(gh run watch:*)"
     ]
   }
 }
