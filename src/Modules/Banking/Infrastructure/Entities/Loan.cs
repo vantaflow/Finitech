@@ -7,7 +7,7 @@ namespace Finitech.Modules.Banking.Domain.Entities;
 /// </summary>
 public class Loan : AggregateRoot
 {
-    public Guid Id { get; private set; }
+    public new Guid Id { get; private set; }
     public Guid PartyId { get; private set; }
     public string LoanNumber { get; private set; } = string.Empty;
     public long PrincipalAmountMinorUnits { get; private set; }

@@ -7,7 +7,7 @@ namespace Finitech.Modules.Banking.Domain.Entities;
 /// </summary>
 public class Card : Entity
 {
-    public Guid Id { get; private set; }
+    public new Guid Id { get; private set; }
     public Guid AccountId { get; private set; }
     public string CardToken { get; private set; } = string.Empty; // Tokenized PAN
     public string CardNumberMasked { get; private set; } = string.Empty; // **** **** **** 1234

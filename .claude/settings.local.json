@@ -15,7 +15,8 @@
       "Bash(git merge:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(gh workflow list:*)"
     ]
   }
 }

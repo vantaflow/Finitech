@@ -110,7 +110,7 @@ public class MfaService : IMfaService
     {
         const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
         var output = new char[(data.Length * 8 + 4) / 5];
-        int i = 0, j = 0;
+        int i = 0;
         int buffer = data[0];
         int next = 1;
         int bitsLeft = 8;

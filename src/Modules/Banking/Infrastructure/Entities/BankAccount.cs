@@ -7,7 +7,7 @@ namespace Finitech.Modules.Banking.Domain.Entities;
 /// </summary>
 public class BankAccount : AggregateRoot
 {
-    public Guid Id { get; private set; }
+    public new Guid Id { get; private set; }
     public Guid PartyId { get; private set; }
     public string AccountNumber { get; private set; } = string.Empty;
     public string AccountType { get; private set; } = string.Empty; // Current, Savings, FixedDeposit
