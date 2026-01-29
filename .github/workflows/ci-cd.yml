@@ -30,7 +30,7 @@ jobs:
         run: dotnet build Finitech.sln --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test Finitech.sln --no-build --verbosity normal
+        run: dotnet test Finitech.sln --verbosity normal
 
   architecture-tests:
     runs-on: ubuntu-latest
