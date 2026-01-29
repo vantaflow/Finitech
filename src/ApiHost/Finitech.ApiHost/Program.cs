@@ -2,10 +2,25 @@ using AspNetCoreRateLimit;
 using Finitech.ApiHost.Configuration;
 using Finitech.ApiHost.Services;
 using Finitech.Modules.Ledger.Infrastructure;
+using Finitech.Modules.IdentityAccess.Infrastructure;
+using Finitech.Modules.Banking.Infrastructure;
+using Finitech.Modules.Wallet.Infrastructure;
 using Serilog;
 
 // Make Outbox background services available
 using Finitech.BuildingBlocks.Infrastructure.Outbox;
+
+// Security services
+using Finitech.BuildingBlocks.Domain.Authentication;
+using Finitech.BuildingBlocks.Domain.Security;
+using Finitech.BuildingBlocks.Infrastructure.Authentication;
+using Finitech.BuildingBlocks.Infrastructure.Security;
+
+// External integrations
+using Finitech.BuildingBlocks.Domain.Integrations;
+using Finitech.BuildingBlocks.Infrastructure.Integrations;
+using Finitech.BuildingBlocks.Infrastructure.Notifications;
+using Finitech.BuildingBlocks.Infrastructure.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +75,30 @@ builder.Services.AddSwaggerGen(options =>
 // Security
 builder.Services.AddSecurityConfig(builder.Configuration);
 
+// Core Security Services (JWT, Password Hashing, Encryption, MFA)
+builder.Services.AddSingleton<IJwtService, JwtService>();
+builder.Services.AddSingleton<IPasswordHasher, CompositePasswordHasher>();
+builder.Services.AddSingleton<IDataEncryption>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<DataEncryptionService>>();
+    var configKey = builder.Configuration["Encryption:MasterKey"];
+    return new DataEncryptionService(logger, configKey);
+});
+builder.Services.AddSingleton<IMfaService, MfaService>();
+builder.Services.AddSingleton<ICardTokenizationService, CardTokenizationService>();
+
+// External Integrations (Mocks for dev)
+builder.Services.AddSingleton<ISmsService, MockSmsService>();
+builder.Services.AddSingleton<IEmailService, MockEmailService>();
+builder.Services.AddSingleton<IKycProvider, MockKycProvider>();
+builder.Services.AddSingleton<IPaymentGateway, MockPaymentGateway>();
+builder.Services.AddSingleton<IFxRateProvider, FxRateProvider>();
+builder.Services.AddSingleton<IDocumentStorage>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<LocalDocumentStorage>>();
+    return new LocalDocumentStorage(logger);
+});
+
 // Health Checks
 builder.Services.AddHealthChecksConfig(builder.Configuration);
 
@@ -68,6 +107,18 @@ builder.Services.AddOpenTelemetryConfig(builder.Configuration, builder.Environme
 
 // Ledger Module
 builder.Services.AddLedgerInfrastructure(builder.Configuration);
+
+// Identity Module
+builder.Services.AddIdentityInfrastructure(builder.Configuration);
+
+// Banking Module
+builder.Services.AddBankingInfrastructure(builder.Configuration);
+
+// Wallet Module
+builder.Services.AddWalletInfrastructure(builder.Configuration);
+
+// Background Jobs (Quartz.NET)
+builder.Services.ConfigureJobs();
 
 // Register other services (currently in-memory for demo)
 builder.Services.AddSingleton<Finitech.Modules.IdentityAccess.Contracts.IIdentityAccessService, IdentityAccessService>();

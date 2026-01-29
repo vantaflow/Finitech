@@ -30,6 +30,8 @@
     <PackageReference Include="Serilog.Sinks.Seq" Version="6.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <PackageReference Include="Quartz" Version="3.8.1" />
+    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.8.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -56,6 +58,9 @@
     <ProjectReference Include="..\..\Modules\WalletFMCG\Contracts\Finitech.Modules.WalletFMCG.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Banking\Contracts\Finitech.Modules.Banking.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Ledger\Infrastructure\Finitech.Modules.Ledger.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Finitech.Modules.IdentityAccess.Infrastructure\Finitech.Modules.IdentityAccess.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Banking\Infrastructure\Finitech.Modules.Banking.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Wallet\Infrastructure\Finitech.Modules.Wallet.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

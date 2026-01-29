@@ -1,3 +1,5 @@
+using Finitech.BuildingBlocks.Domain.Authentication;
+using Finitech.BuildingBlocks.Domain.Security;
 using Finitech.Modules.IdentityAccess.Contracts;
 using Finitech.Modules.IdentityAccess.Contracts.DTOs;
 using Finitech.Modules.IdentityCompliance.Contracts;
@@ -35,103 +37,293 @@ namespace Finitech.ApiHost.Services;
 
 public class IdentityAccessService : IIdentityAccessService
 {
-    private readonly ConcurrentDictionary<string, (RegisterResponse Response, string Password)> _users = new();
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtService _jwtService;
+    private readonly IDataEncryption _encryption;
+
+    // In-memory storage until persistence is implemented
+    private readonly ConcurrentDictionary<string, UserRecord> _users = new();
     private readonly ConcurrentDictionary<string, string> _resetTokens = new();
-    private readonly ConcurrentDictionary<string, LoginResponse> _sessions = new();
+    private readonly ConcurrentDictionary<string, Guid> _refreshTokens = new();
+
+    public IdentityAccessService(
+        IPasswordHasher passwordHasher,
+        IJwtService jwtService,
+        IDataEncryption encryption)
+    {
+        _passwordHasher = passwordHasher;
+        _jwtService = jwtService;
+        _encryption = encryption;
+    }
 
     public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
-        var response = new RegisterResponse
+        var email = request.Email.ToLower().Trim();
+
+        if (_users.ContainsKey(email))
+            throw new InvalidOperationException("User already exists");
+
+        // Hash password securely using Argon2id
+        var passwordHash = _passwordHasher.HashPassword(request.Password);
+
+        // Encrypt PII
+        var encryptedPhone = !string.IsNullOrEmpty(request.PhoneNumber)
+            ? _encryption.Encrypt(request.PhoneNumber)
+            : null;
+
+        var userId = Guid.NewGuid();
+        var userRecord = new UserRecord
         {
-            UserId = Guid.NewGuid(),
-            Email = request.Email,
-            Status = "Active"
+            UserId = userId,
+            Email = email,
+            PasswordHash = passwordHash,
+            EncryptedPhone = encryptedPhone,
+            Status = "Active",
+            CreatedAt = DateTime.UtcNow,
+            Roles = new[] { "User" },
+            Permissions = new[] { "wallet:read", "wallet:write", "banking:read" }
         };
-        _users[request.Email.ToLower()] = (response, request.Password);
-        return Task.FromResult(response);
+
+        _users[email] = userRecord;
+
+        return Task.FromResult(new RegisterResponse
+        {
+            UserId = userId,
+            Email = email,
+            Status = "Active"
+        });
     }
 
     public Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var email = request.EmailOrPhone.ToLower();
-        if (!_users.TryGetValue(email, out var user) || user.Password != HashPassword(request.Password))
+        var email = request.EmailOrPhone.ToLower().Trim();
+
+        if (!_users.TryGetValue(email, out var user))
             throw new InvalidOperationException("Invalid credentials");
 
-        var response = new LoginResponse
+        // Verify password using constant-time comparison
+        if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
+            throw new InvalidOperationException("Invalid credentials");
+
+        // Check if user is active
+        if (user.Status != "Active")
+            throw new InvalidOperationException("Account is locked or inactive");
+
+        // Update last login
+        user.LastLoginAt = DateTime.UtcNow;
+
+        // Generate JWT tokens
+        var accessToken = _jwtService.GenerateAccessToken(user.UserId, user.Email, user.Roles, user.Permissions);
+        var refreshToken = _jwtService.GenerateRefreshToken(user.UserId);
+
+        // Store refresh token mapping
+        _refreshTokens[refreshToken.Token] = user.UserId;
+
+        return Task.FromResult(new LoginResponse
         {
-            AccessToken = GenerateToken(),
-            RefreshToken = GenerateToken(),
-            ExpiresAt = DateTime.UtcNow.AddHours(8),
-            UserId = user.Response.UserId.ToString(),
-            Email = user.Response.Email
-        };
-        _sessions[response.AccessToken] = response;
-        return Task.FromResult(response);
+            AccessToken = accessToken.Token,
+            RefreshToken = refreshToken.Token,
+            ExpiresAt = accessToken.ExpiresAt,
+            UserId = user.UserId.ToString(),
+            Email = user.Email
+        });
     }
 
     public Task<LoginResponse> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
     {
-        var response = new LoginResponse
+        // Validate refresh token
+        var userId = _jwtService.ValidateRefreshToken(request.RefreshToken);
+        if (userId == null)
+            throw new InvalidOperationException("Invalid or expired refresh token");
+
+        // Find user
+        var user = _users.Values.FirstOrDefault(u => u.UserId == userId);
+        if (user == null || user.Status != "Active")
+            throw new InvalidOperationException("User not found or inactive");
+
+        // Revoke old refresh token
+        _jwtService.RevokeRefreshTokenAsync(request.RefreshToken, cancellationToken);
+
+        // Generate new tokens
+        var accessToken = _jwtService.GenerateAccessToken(user.UserId, user.Email, user.Roles, user.Permissions);
+        var refreshToken = _jwtService.GenerateRefreshToken(user.UserId);
+
+        return Task.FromResult(new LoginResponse
         {
-            AccessToken = GenerateToken(),
-            RefreshToken = GenerateToken(),
-            ExpiresAt = DateTime.UtcNow.AddHours(8),
-            UserId = Guid.NewGuid().ToString(),
-            Email = "refreshed@example.com"
-        };
-        return Task.FromResult(response);
+            AccessToken = accessToken.Token,
+            RefreshToken = refreshToken.Token,
+            ExpiresAt = accessToken.ExpiresAt,
+            UserId = user.UserId.ToString(),
+            Email = user.Email
+        });
     }
 
     public Task<ForgotPasswordResponse> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        var token = GenerateToken();
-        _resetTokens[request.Email.ToLower()] = token;
+        var email = request.Email.ToLower().Trim();
+
+        // Always return success even if user not found (prevents user enumeration)
+        if (_users.TryGetValue(email, out var user))
+        {
+            var token = GenerateSecureToken();
+            _resetTokens[token] = email;
+
+            // In production, send email with reset link
+            // For now, return the token (dev mode only)
+            return Task.FromResult(new ForgotPasswordResponse
+            {
+                ResetToken = token,
+                ExpiresAt = DateTime.UtcNow.AddHours(1)
+            });
+        }
+
         return Task.FromResult(new ForgotPasswordResponse
         {
-            ResetToken = token,
+            ResetToken = "sent",
             ExpiresAt = DateTime.UtcNow.AddHours(1)
         });
     }
 
     public Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
+        if (!_resetTokens.TryGetValue(request.ResetToken, out var email))
+            throw new InvalidOperationException("Invalid or expired reset token");
+
+        if (_users.TryGetValue(email, out var user))
+        {
+            // Hash new password
+            user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+            user.PasswordChangedAt = DateTime.UtcNow;
+
+            // Revoke all sessions
+            _jwtService.RevokeAllUserTokensAsync(user.UserId, cancellationToken);
+        }
+
+        _resetTokens.TryRemove(request.ResetToken, out _);
         return Task.CompletedTask;
     }
 
     public Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default)
     {
+        var user = _users.Values.FirstOrDefault(u => u.UserId == userId);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+
+        // Verify current password
+        if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+            throw new InvalidOperationException("Current password is incorrect");
+
+        // Update password
+        user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+        user.PasswordChangedAt = DateTime.UtcNow;
+
         return Task.CompletedTask;
     }
 
     public Task ChangeContactAsync(Guid userId, ChangeContactRequest request, CancellationToken cancellationToken = default)
     {
+        var user = _users.Values.FirstOrDefault(u => u.UserId == userId);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+
+        if (!string.IsNullOrEmpty(request.NewEmail))
+        {
+            var newEmail = request.NewEmail.ToLower().Trim();
+
+            // Remove from old key
+            _users.TryRemove(user.Email, out _);
+
+            // Update email
+            user.Email = newEmail;
+            user.IsEmailVerified = false;
+
+            // Add with new key
+            _users[newEmail] = user;
+        }
+
+        if (!string.IsNullOrEmpty(request.NewPhoneNumber))
+        {
+            user.EncryptedPhone = _encryption.Encrypt(request.NewPhoneNumber.Trim());
+            user.IsPhoneVerified = false;
+        }
+
         return Task.CompletedTask;
     }
 
     public Task LockAccountAsync(Guid userId, string reason, string? adminId = null, CancellationToken cancellationToken = default)
     {
+        var user = _users.Values.FirstOrDefault(u => u.UserId == userId);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+
+        user.Status = "Locked";
+        user.LockedAt = DateTime.UtcNow;
+        user.LockedBy = adminId;
+        user.LockReason = reason;
+
+        // Revoke all tokens
+        _jwtService.RevokeAllUserTokensAsync(userId, cancellationToken);
+
         return Task.CompletedTask;
     }
 
     public Task UnlockAccountAsync(Guid userId, string? adminId = null, CancellationToken cancellationToken = default)
     {
+        var user = _users.Values.FirstOrDefault(u => u.UserId == userId);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+
+        user.Status = "Active";
+        user.LockedAt = null;
+        user.LockedBy = null;
+        user.LockReason = null;
+
         return Task.CompletedTask;
     }
 
     public Task<bool> ValidateTokenAsync(string token, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(_sessions.ContainsKey(token));
+        var principal = _jwtService.ValidateAccessToken(token);
+        return Task.FromResult(principal != null);
     }
 
     public Task<Guid?> GetUserIdFromTokenAsync(string token, CancellationToken cancellationToken = default)
     {
-        if (_sessions.TryGetValue(token, out var session))
-            return Task.FromResult<Guid?>(Guid.Parse(session.UserId));
-        return Task.FromResult<Guid?>(null);
+        var principal = _jwtService.ValidateAccessToken(token);
+        return Task.FromResult(principal?.UserId);
     }
 
-    private static string HashPassword(string password) => password;
-    private static string GenerateToken() => Guid.NewGuid().ToString("N");
+    private static string GenerateSecureToken()
+    {
+        var tokenBytes = new byte[32];
+        using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(tokenBytes);
+        }
+        return Convert.ToBase64String(tokenBytes)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .Replace("=", "");
+    }
+
+    private class UserRecord
+    {
+        public Guid UserId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string? EncryptedPhone { get; set; }
+        public string Status { get; set; } = "Active";
+        public DateTime CreatedAt { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+        public DateTime? PasswordChangedAt { get; set; }
+        public DateTime? LockedAt { get; set; }
+        public string? LockedBy { get; set; }
+        public string? LockReason { get; set; }
+        public bool IsEmailVerified { get; set; }
+        public bool IsPhoneVerified { get; set; }
+        public string[] Roles { get; set; } = Array.Empty<string>();
+        public string[] Permissions { get; set; } = Array.Empty<string>();
+    }
 }
 
 public class IdentityComplianceService : IIdentityComplianceService
