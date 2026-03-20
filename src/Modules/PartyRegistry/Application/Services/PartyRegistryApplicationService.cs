@@ -1,41 +1,23 @@
-using Finitech.Modules.PartyRegistry.Contracts;
-using Finitech.Modules.PartyRegistry.Domain;
-
 namespace Finitech.Modules.PartyRegistry.Application.Services;
+
+public interface IPartyRepository
+{
+    Task<PartyDto> CreateAsync(string partyType, string firstName, string lastName, string displayName, string email, string phoneNumber, List<string> roles);
+    Task<PartyDto?> GetByIdAsync(Guid partyId);
+    Task AssignRoleAsync(Guid partyId, string role, string domain);
+}
 
 public class PartyRegistryApplicationService
 {
-    public async Task<Party> CreatePartyAsync(
-        string partyType, string firstName, string lastName,
-        string displayName, string email, string phoneNumber,
-        List<string> initialRoles)
-    {
-        var party = new Party
-        {
-            Id = Guid.NewGuid(),
-            PartyType = partyType,
-            FirstName = firstName,
-            LastName = lastName,
-            DisplayName = displayName,
-            Email = email,
-            PhoneNumber = phoneNumber,
-            Status = "Active",
-            CreatedAt = DateTime.UtcNow,
-            Roles = initialRoles
-        };
+    private readonly IPartyRepository _repo;
 
-        // Persist via repository
-        return await Task.FromResult(party);
-    }
+    public PartyRegistryApplicationService(IPartyRepository repo) => _repo = repo;
 
-    public async Task AssignRoleAsync(Guid partyId, string role, string domain)
-    {
-        // Load party, add role, save
-        await Task.CompletedTask;
-    }
+    public Task<PartyDto> CreatePartyAsync(string partyType, string firstName, string lastName, string displayName, string email, string phoneNumber, List<string> initialRoles)
+        => _repo.CreateAsync(partyType, firstName, lastName, displayName, email, phoneNumber, initialRoles);
 
-    public async Task<Party?> GetPartyAsync(Guid partyId)
-    {
-        return await Task.FromResult<Party?>(null);
-    }
+    public Task AssignRoleAsync(Guid partyId, string role, string domain) => _repo.AssignRoleAsync(partyId, role, domain);
+    public Task<PartyDto?> GetPartyAsync(Guid partyId) => _repo.GetByIdAsync(partyId);
 }
+
+public record PartyDto(Guid Id, string PartyType, string DisplayName, string Email, string PhoneNumber, List<string> Roles, string Status);

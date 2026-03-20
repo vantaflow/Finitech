@@ -1,41 +1,31 @@
 namespace Finitech.Modules.Notifications.Application.Services;
 
+public interface INotificationSender
+{
+    Task SendSmsAsync(string phoneNumber, string body);
+    Task SendEmailAsync(string email, string subject, string body);
+    Task SendPushAsync(string deviceToken, string title, string body);
+}
+
 public class NotificationApplicationService
 {
-    public async Task SendAsync(Guid recipientPartyId, string channel, string subject, string body, Dictionary<string, string>? data = null)
+    private readonly INotificationSender? _sender;
+
+    public NotificationApplicationService(INotificationSender? sender = null) => _sender = sender;
+
+    public async Task SendAsync(string channel, string recipient, string subject, string body)
     {
-        // Route to the appropriate channel (SMS, Email, Push)
+        if (_sender == null)
+        {
+            Console.WriteLine($"[{channel} → {recipient}] {subject}: {body}");
+            return;
+        }
+
         switch (channel.ToUpperInvariant())
         {
-            case "SMS":
-                await SendSmsAsync(recipientPartyId, body);
-                break;
-            case "EMAIL":
-                await SendEmailAsync(recipientPartyId, subject, body);
-                break;
-            case "PUSH":
-                await SendPushAsync(recipientPartyId, subject, body, data);
-                break;
-            default:
-                throw new ArgumentException($"Unknown channel: {channel}");
+            case "SMS": await _sender.SendSmsAsync(recipient, body); break;
+            case "EMAIL": await _sender.SendEmailAsync(recipient, subject, body); break;
+            case "PUSH": await _sender.SendPushAsync(recipient, subject, body); break;
         }
-    }
-
-    private Task SendSmsAsync(Guid recipientPartyId, string body)
-    {
-        Console.WriteLine($"[SMS → {recipientPartyId}] {body}");
-        return Task.CompletedTask;
-    }
-
-    private Task SendEmailAsync(Guid recipientPartyId, string subject, string body)
-    {
-        Console.WriteLine($"[EMAIL → {recipientPartyId}] {subject}: {body}");
-        return Task.CompletedTask;
-    }
-
-    private Task SendPushAsync(Guid recipientPartyId, string subject, string body, Dictionary<string, string>? data)
-    {
-        Console.WriteLine($"[PUSH → {recipientPartyId}] {subject}: {body}");
-        return Task.CompletedTask;
     }
 }

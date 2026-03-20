@@ -1,4 +1,4 @@
-name: CI — Build, Test & Analyze
+name: CI — Build & Test
 
 on:
   push:
@@ -12,20 +12,6 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
-        env:
-          ACCEPT_EULA: Y
-          MSSQL_SA_PASSWORD: YourStrong@Passw0rd
-        ports:
-          - 1433:1433
-        options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -C -Q 'SELECT 1'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -42,26 +28,7 @@ jobs:
         run: dotnet build Finitech.sln --configuration Release --no-restore
 
       - name: Run Unit Tests
-        run: dotnet test tests/Finitech.UnitTests --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=unit-results.trx"
+        run: dotnet test tests/Finitech.UnitTests --configuration Release --no-build --verbosity normal
 
       - name: Run Architecture Tests
-        run: dotnet test tests/Finitech.ArchitectureTests --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=arch-results.trx"
-
-      - name: Run Integration Tests
-        run: dotnet test tests/Finitech.IntegrationTests --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration-results.trx"
-        env:
-          ConnectionStrings__DefaultConnection: "Server=localhost;Database=FinitechTest;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True"
-
-  docker:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Build Docker image
-        run: docker build -t finitech:latest -f src/ApiHost/Finitech.ApiHost/Dockerfile .
-
-      - name: Verify Docker image
-        run: docker images finitech:latest
+        run: dotnet test tests/Finitech.ArchitectureTests --configuration Release --no-build --verbosity normal

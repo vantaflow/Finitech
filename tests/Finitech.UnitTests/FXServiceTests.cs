@@ -21,11 +21,11 @@ public class FXServiceTests
     }
 
     [Fact]
-    public async Task CreateQuote_ValidPair_ReturnsConvertedAmount()
+    public async Task CreateQuote_MADtoEUR_ReturnsLessAmount()
     {
         var result = await _service.CreateQuoteAsync("MAD", "EUR", 100000);
         Assert.True(result.ConvertedAmount > 0);
-        Assert.True(result.ConvertedAmount < 100000); // MAD→EUR should be less
+        Assert.True(result.ConvertedAmount < 100000);
         Assert.True(result.ExpiresAt > DateTime.UtcNow);
     }
 

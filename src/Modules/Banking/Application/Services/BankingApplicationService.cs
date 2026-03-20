@@ -1,77 +1,32 @@
-using Finitech.Modules.Banking.Infrastructure.Data;
-using Finitech.Modules.Banking.Infrastructure.Entities;
-using Microsoft.EntityFrameworkCore;
-
 namespace Finitech.Modules.Banking.Application.Services;
+
+public interface IBankingRepository
+{
+    Task<BankAccountDto> OpenAccountAsync(Guid partyId, string accountType, string currencyCode);
+    Task<BankAccountDto?> GetAccountAsync(Guid accountId);
+    Task<List<BankAccountDto>> GetAccountsByPartyAsync(Guid partyId);
+    Task<LoanDto> RequestLoanAsync(Guid partyId, long amountMinorUnits, int durationMonths, string purpose);
+    Task<LoanDto> ApproveLoanAsync(Guid loanId, decimal interestRate, string approvedBy);
+}
 
 public class BankingApplicationService
 {
-    private readonly BankingDbContext _db;
+    private readonly IBankingRepository _repo;
 
-    public BankingApplicationService(BankingDbContext db)
-    {
-        _db = db;
-    }
+    public BankingApplicationService(IBankingRepository repo) => _repo = repo;
 
-    public async Task<BankAccount> OpenAccountAsync(Guid partyId, string accountType, string currencyCode)
-    {
-        var account = new BankAccount
-        {
-            Id = Guid.NewGuid(),
-            PartyId = partyId,
-            AccountType = accountType,
-            CurrencyCode = currencyCode,
-            BalanceMinorUnits = 0,
-            Status = "Active",
-            CreatedAt = DateTime.UtcNow
-        };
+    public Task<BankAccountDto> OpenAccountAsync(Guid partyId, string accountType, string currencyCode)
+        => _repo.OpenAccountAsync(partyId, accountType, currencyCode);
 
-        _db.BankAccounts.Add(account);
-        await _db.SaveChangesAsync();
-        return account;
-    }
+    public Task<LoanDto> RequestLoanAsync(Guid partyId, long amountMinorUnits, int durationMonths, string purpose)
+        => _repo.RequestLoanAsync(partyId, amountMinorUnits, durationMonths, purpose);
 
-    public async Task<Loan> RequestLoanAsync(Guid partyId, long amountMinorUnits, int durationMonths, string purpose)
-    {
-        var loan = new Loan
-        {
-            Id = Guid.NewGuid(),
-            PartyId = partyId,
-            RequestedAmountMinorUnits = amountMinorUnits,
-            DurationMonths = durationMonths,
-            Purpose = purpose,
-            Status = "Pending",
-            RequestedAt = DateTime.UtcNow
-        };
+    public Task<LoanDto> ApproveLoanAsync(Guid loanId, decimal interestRate, string approvedBy)
+        => _repo.ApproveLoanAsync(loanId, interestRate, approvedBy);
 
-        _db.Loans.Add(loan);
-        await _db.SaveChangesAsync();
-        return loan;
-    }
-
-    public async Task<Loan> ApproveLoanAsync(Guid loanId, decimal interestRate, string approvedBy)
-    {
-        var loan = await _db.Loans.FindAsync(loanId)
-            ?? throw new InvalidOperationException("Loan not found");
-
-        loan.Status = "Approved";
-        loan.InterestRate = interestRate;
-        loan.ApprovedBy = approvedBy;
-        loan.ApprovedAt = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-        return loan;
-    }
-
-    public async Task<BankAccount?> GetAccountAsync(Guid accountId)
-    {
-        return await _db.BankAccounts.FindAsync(accountId);
-    }
-
-    public async Task<List<BankAccount>> GetAccountsByPartyAsync(Guid partyId)
-    {
-        return await _db.BankAccounts
-            .Where(a => a.PartyId == partyId)
-            .ToListAsync();
-    }
+    public Task<BankAccountDto?> GetAccountAsync(Guid accountId) => _repo.GetAccountAsync(accountId);
+    public Task<List<BankAccountDto>> GetAccountsByPartyAsync(Guid partyId) => _repo.GetAccountsByPartyAsync(partyId);
 }
+
+public record BankAccountDto(Guid Id, Guid PartyId, string AccountType, string CurrencyCode, long BalanceMinorUnits, string Status);
+public record LoanDto(Guid Id, Guid PartyId, long AmountMinorUnits, int DurationMonths, string Status, decimal? InterestRate);

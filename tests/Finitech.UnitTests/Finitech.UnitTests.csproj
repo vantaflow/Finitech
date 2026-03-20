@@ -23,6 +23,10 @@
     <ProjectReference Include="..\..\src\BuildingBlocks\Finitech.BuildingBlocks.SharedKernel\Finitech.BuildingBlocks.SharedKernel.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\Finitech.BuildingBlocks.Domain\Finitech.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="..\..\src\ApiHost\Finitech.ApiHost\Finitech.ApiHost.csproj" />
+    <ProjectReference Include="..\..\src\Modules\FX\Application\Finitech.Modules.FX.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Disputes\Application\Finitech.Modules.Disputes.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\MerchantPayments\Application\Finitech.Modules.MerchantPayments.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Budgeting\Application\Finitech.Modules.Budgeting.Application.csproj" />
   </ItemGroup>
 
 </Project>
