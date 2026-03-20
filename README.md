@@ -1,127 +1,141 @@
-# Finitech - FinTech Platform Architecture
+# Finitech — FinTech Platform Architecture
 
-Architecture .NET complète pour une plateforme FinTech couvrant Banking et Wallet avec séparation stricte des domaines.
+[![CI](https://github.com/khalilbenaz/Finitech/actions/workflows/ci.yml/badge.svg)](https://github.com/khalilbenaz/Finitech/actions/workflows/ci.yml)
+[![.NET](https://img.shields.io/badge/.NET-8.0-purple)](https://dotnet.microsoft.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Modules](https://img.shields.io/badge/modules-18-blue)]()
+[![Architecture](https://img.shields.io/badge/architecture-Modular%20Monolith-green)]()
+
+Architecture .NET 8 complète pour une plateforme FinTech couvrant **Banking**, **Wallet** et **Paiements** avec séparation stricte des domaines, sécurité enterprise-grade et conformité réglementaire.
+
+---
+
+## Pourquoi Modular Monolith ?
+
+| Raison | Détail |
+|--------|--------|
+| **Cohérence transactionnelle** | Le ledger immuable nécessite des transactions ACID strictes |
+| **Performance** | Pas de latence réseau des appels inter-services |
+| **Simplicité opérationnelle** | Un seul déploiement, un seul monitoring |
+| **Migration progressive** | Décomposable en microservices si nécessaire |
+
+---
 
 ## Architecture
 
-### Choix Architectural: Modular Monolith
-
-Nous avons choisi l'approche **Modular Monolith** pour les raisons suivantes:
-- **Cohérence transactionnelle forte**: Le ledger immuable nécessite des transactions ACID strictes
-- **Performance à fort volume**: Éviter la latence réseau des appels inter-services en production
-- **Simplicité opérationnelle**: Un seul déploiement, une seule base de données, monitoring simplifié
-- **Migration progressive**: Facilement décomposable en microservices si nécessaire plus tard
-- **Consistance des données**: Garantie par la base de données relationnelle
-
-### Structure des Modules
-
-```
-/src
-  /BuildingBlocks
-    /Finitech.BuildingBlocks.Domain        # Interfaces, repositories, Result
-    /Finitech.BuildingBlocks.Application   # CQRS, MediatR patterns
-    /Finitech.BuildingBlocks.Infrastructure # EF Core, messaging
-    /Finitech.BuildingBlocks.Contracts     # DTOs partagés
-    /Finitech.BuildingBlocks.SharedKernel  # Money, ValueObjects, Entities
-
-  /Modules
-    /PartyRegistry        # Référentiel commun clients/parties
-    /IdentityAccess       # Authentification, login, reset password
-    /IdentityCompliance   # eKYC, KYB, AML, fraude
-    /BranchNetwork        # Gestion des agences
-    /Ledger               # Source de vérité money-movement
-    /FX                   # Taux de change, conversions
-    /Payments             # Virements, factures, ordres permanents
-    /Statements           # Relevés comptables
-    /MerchantPayments     # QR EMVCo, paiement marchand
-    /Disputes             # Refunds, chargebacks
-    /Notifications        # Email, SMS, Push
-    /Documents            # Stockage documents
-    /Budgeting            # Catégorisation, budgets
-    /Audit                # Audit trail compliance
-    /Scheduler            # Jobs planifiés
-    /Wallet               # Portefeuille digital (P2P, loyalty)
-    /WalletFMCG           # Distribution, agents, commissions
-    /Banking              # Comptes bancaires, prêts, cartes
-
-  /ApiHost              # Host ASP.NET Core
-/tests
-  /UnitTests
-  /IntegrationTests
-  /ArchitectureTests    # NetArchTest.Rules
-```
-
-### Règles de Dépendances (OBLIGATOIRES)
-
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        API HOST                                 │
+│                          API HOST                               │
 ├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  ┌─────────────┐  │
-│  │ Banking  │  │  Wallet  │  │ WalletFMCG   │  │   Ledger    │  │
-│  │ (Spécif) │  │ (Spécif) │  │  (Spécif)    │  │   (Commun)  │  │
-│  └────┬─────┘  └────┬─────┘  └──────┬───────┘  └──────┬──────┘  │
-│       │             │               │                 │         │
-│       └─────────────┴───────────────┴─────────────────┘         │
-│                          │                                      │
-│       ┌──────────────────┴──────────────────┐                   │
-│       │                                     │                   │
-│  ┌────┴─────┐  ┌──────────┐  ┌──────────┐   │                   │
-│  │Payments  │  │   FX     │  │Statements│   │                   │
-│  │(Commun)  │  │(Commun)  │  │(Commun)  │   │                   │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘   │                   │
-│       │             │             │         │                   │
-│       └─────────────┴─────────────┘         │                   │
-│                     │                       │                   │
-│              ┌──────┴──────┐                │                   │
-│              │             │                │                   │
-│        ┌─────┴────┐   ┌────┴────┐     ┌─────┴─────┐             │
-│        │PartyReg. │   │Identity │     │  Branch   │             │
-│        │(Shared)  │   │(Shared) │     │  Network  │             │
-│        └──────────┘   └─────────┘     └───────────┘             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  ┌─────────────┐│
+│  │ Banking  │  │  Wallet  │  │ WalletFMCG   │  │   Ledger    ││
+│  │  🟢      │  │  🟢      │  │  🟠          │  │   🟢        ││
+│  └────┬─────┘  └────┬─────┘  └──────┬───────┘  └──────┬──────┘│
+│       └─────────────┴───────────────┴──────────────────┘       │
+│                              │                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
+│  │Payments  │  │    FX    │  │Statements│  │MerchantPay   │   │
+│  │  🟡      │  │  🟡      │  │  🟠      │  │  🟡          │   │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬───────┘   │
+│       └─────────────┴─────────────┘                │            │
+│                     │                              │            │
+│  ┌──────────┐  ┌────────────┐  ┌──────────┐  ┌────┴─────┐     │
+│  │PartyReg. │  │ Identity   │  │Compliance│  │Disputes  │     │
+│  │  🟢      │  │  🟢        │  │  🟠      │  │  🟡      │     │
+│  └──────────┘  └────────────┘  └──────────┘  └──────────┘     │
 │                                                                 │
-│        ┌─────────────────────────────────────────┐              │
-│        │         BuildingBlocks                  │              │
-│        │  (Domain, Application, Infrastructure)  │              │
-│        └─────────────────────────────────────────┘              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
+│  │Notifs    │  │Budgeting │  │  Audit   │  │  Documents   │   │
+│  │  🟡      │  │  🟡      │  │  🟠      │  │  🟠          │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────┘   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │              BuildingBlocks                             │   │
+│  │   Domain · Application · Infrastructure · SharedKernel  │   │
+│  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
+
+🟢 Implemented   🟡 Service Layer   🟠 Contracts   ⚪ Scaffold
 ```
 
-**Règles STRICTES:**
-- ❌ Banking ne peut JAMAIS référencer Wallet ou WalletFMCG
-- ❌ Wallet ne peut JAMAIS référencer Banking
-- ✅ Les deux peuvent référencer les modules communs (Ledger, Payments, FX, PartyRegistry)
-- ✅ La communication inter-modules se fait uniquement via Contracts + interfaces
+**Règles de dépendances strictes :**
+- ❌ Banking ne référence JAMAIS Wallet ou WalletFMCG
+- ❌ Wallet ne référence JAMAIS Banking
+- ✅ Les deux référencent les modules communs (Ledger, Payments, FX, PartyRegistry)
+- ✅ Communication inter-modules uniquement via Contracts (interfaces + DTOs)
+- ✅ Domain ne dépend jamais d'Infrastructure (Clean Architecture)
+
+---
+
+## Les 18 Modules
+
+### Core — Implémentés 🟢
+
+| Module | Rôle | Fonctionnalités |
+|--------|------|-----------------|
+| **Ledger** | Source de vérité financière | Double-entry bookkeeping, multi-devise, outbox pattern, historique immutable |
+| **Identity** | Authentification | JWT RSA-2048, refresh tokens avec rotation, MFA/TOTP, sessions |
+| **Banking** | Comptes bancaires | Comptes épargne, prêts, découvert, calcul d'intérêts, cartes |
+| **Wallet** | Portefeuille digital | P2P transfers, split payments, loyalty points, paiements programmés |
+| **PartyRegistry** | Référentiel clients | Parties (Individual/Organization), rôles multi-domaines |
+
+### Services — Application Layer 🟡
+
+| Module | Rôle | Fonctionnalités |
+|--------|------|-----------------|
+| **Payments** | Virements | Intra-devise, cross-devise via FX, ordres permanents |
+| **FX** | Change | Taux de change temps réel (simulé), quotes 5min, conversion MAD/EUR/USD |
+| **MerchantPayments** | Paiement marchand | QR EMVCo dynamique, paiement par scan, ISO 4217 |
+| **Disputes** | Litiges | Remboursements partiels/totaux, chargebacks |
+| **Notifications** | Alertes | Routing SMS/Email/Push, templates |
+| **Budgeting** | Gestion budget | Catégorisation, budgets mensuels, analytics de dépenses, alertes seuil |
+
+### Contracts définis 🟠
+
+| Module | Rôle |
+|--------|------|
+| **IdentityCompliance** | eKYC, KYB, AML, détection fraude, freeze/unfreeze |
+| **Statements** | Relevés comptables périodiques |
+| **WalletFMCG** | Distribution agents, cash-in/cash-out, commissions |
+| **Audit** | Audit trail pour compliance |
+| **Documents** | Stockage documents (S3 compatible) |
+| **BranchNetwork** | Gestion des agences |
+| **Scheduler** | Jobs planifiés (Quartz.NET) |
+
+---
 
 ## Stack Technique
 
-- **.NET 8.0**
-- **SQL Server 2022** (Docker pour dev)
-- **Entity Framework Core** + Migrations
-- **JWT Authentication** avec RSA-2048 signing
-- **Argon2id** Password Hashing (OWASP)
-- **AES-256-GCM** Data Encryption
-- **Quartz.NET** Background Jobs
-- **OpenAPI/Swagger**
-- **xUnit** pour les tests
-- **OpenTelemetry** Observabilité
+| Composant | Technologie |
+|-----------|-------------|
+| **Runtime** | .NET 8.0 |
+| **Database** | SQL Server 2022 |
+| **ORM** | Entity Framework Core + Migrations |
+| **Auth** | JWT RSA-2048 signing |
+| **Passwords** | Argon2id (OWASP recommended) |
+| **Encryption** | AES-256-GCM pour PII |
+| **MFA** | TOTP (Google/Microsoft Authenticator) |
+| **Cards** | Tokenization PCI-compliant |
+| **Background Jobs** | Quartz.NET |
+| **API Docs** | OpenAPI / Swagger |
+| **Tests** | xUnit + NetArchTest.Rules |
+| **Observabilité** | OpenTelemetry + Prometheus |
+| **Containers** | Docker + Docker Compose |
+| **Orchestration** | Kubernetes (Kustomize) |
+| **CI/CD** | GitHub Actions |
 
-## Démarrage Rapide
+---
+
+## Quick Start
 
 ### Prérequis
 - Docker Desktop
 - .NET 8 SDK
-- cURL ou Postman
 
 ### 1. Démarrer SQL Server
 
 ```bash
 docker-compose up -d sqlserver
-```
-
-Attendre que SQL Server soit prêt (~30s):
-```bash
-docker logs -f finitech-sqlserver
 ```
 
 ### 2. Lancer l'application
@@ -130,19 +144,20 @@ docker logs -f finitech-sqlserver
 dotnet run --project src/ApiHost/Finitech.ApiHost/Finitech.ApiHost.csproj
 ```
 
-L'API sera disponible sur: `https://localhost:5001` ou `http://localhost:5000`
+→ API : `http://localhost:5000`
+→ Swagger : `http://localhost:5000/swagger`
 
-Swagger UI: `https://localhost:5001/swagger`
-
-### 3. Exécuter avec Docker Compose (tout en un)
+### 3. Tout en Docker
 
 ```bash
 docker-compose up --build
 ```
 
-## Exemples cURL
+---
 
-### PartyRegistry - Créer un Party (Consumer + RetailCustomer)
+## Exemples d'utilisation
+
+### Créer un client
 
 ```bash
 curl -X POST http://localhost:5000/api/partyregistry \
@@ -151,226 +166,21 @@ curl -X POST http://localhost:5000/api/partyregistry \
     "partyType": "Individual",
     "firstName": "Ahmed",
     "lastName": "Benali",
-    "displayName": "Ahmed Benali",
-    "email": "ahmed.benali@example.com",
+    "email": "ahmed@example.com",
     "phoneNumber": "+212612345678",
     "initialRoles": ["Consumer", "RetailCustomer"]
   }'
 ```
 
-### PartyRegistry - Assigner un rôle Merchant
-
-```bash
-curl -X POST http://localhost:5000/api/partyregistry/{partyId}/roles \
-  -H "Content-Type: application/json" \
-  -d '{
-    "role": "Merchant",
-    "domain": "Wallet"
-  }'
-```
-
-### Compliance - Soumettre eKYC
-
-```bash
-curl -X POST http://localhost:5000/api/compliance/kyc \
-  -H "Content-Type: application/json" \
-  -d '{
-    "partyId": "{partyId}",
-    "documentType": "NationalId",
-    "documentNumber": "AB123456",
-    "documentExpiryDate": "2029-12-31T00:00:00Z",
-    "documentFrontImageUrl": "https://storage.example.com/front.jpg",
-    "documentBackImageUrl": "https://storage.example.com/back.jpg",
-    "selfieImageUrl": "https://storage.example.com/selfie.jpg"
-  }'
-```
-
-### Compliance - Approuver KYC
-
-```bash
-curl -X POST http://localhost:5000/api/compliance/kyc/{kycId}/review \
-  -H "Content-Type: application/json" \
-  -d '{
-    "decision": "Approved",
-    "reviewedBy": "admin001"
-  }'
-```
-
-### Ledger - Consulter les balances multi-devise
-
-```bash
-curl http://localhost:5000/api/ledger/accounts/{accountId}/balances
-```
-
-**Réponse:**
-```json
-{
-  "accountId": "...",
-  "balances": [
-    { "currencyCode": "MAD", "amountMinorUnits": 1000000, "amountDecimal": 10000.00, "currencyNumericCode": 504 },
-    { "currencyCode": "EUR", "amountMinorUnits": 50000, "amountDecimal": 500.00, "currencyNumericCode": 978 },
-    { "currencyCode": "USD", "amountMinorUnits": 10000, "amountDecimal": 100.00, "currencyNumericCode": 840 }
-  ]
-}
-```
-
-### Ledger - Historique des écritures
-
-```bash
-curl -X POST http://localhost:5000/api/ledger/accounts/{accountId}/history \
-  -H "Content-Type: application/json" \
-  -d '{
-    "currencyCode": "MAD",
-    "fromDate": "2024-01-01T00:00:00Z",
-    "toDate": "2024-12-31T23:59:59Z",
-    "skip": 0,
-    "take": 50
-  }'
-```
-
-### FX - Obtenir un taux
+### Obtenir un taux de change
 
 ```bash
 curl -X POST http://localhost:5000/api/fx/rate \
   -H "Content-Type: application/json" \
-  -d '{
-    "fromCurrencyCode": "MAD",
-    "toCurrencyCode": "EUR"
-  }'
+  -d '{"fromCurrencyCode": "MAD", "toCurrencyCode": "EUR"}'
 ```
 
-### FX - Créer une quote de conversion
-
-```bash
-curl -X POST http://localhost:5000/api/fx/quote \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fromCurrencyCode": "MAD",
-    "toCurrencyCode": "EUR",
-    "amountMinorUnits": 100000
-  }'
-```
-
-### FX - Exécuter la conversion
-
-```bash
-curl -X POST http://localhost:5000/api/fx/convert \
-  -H "Content-Type: application/json" \
-  -d '{
-    "quoteId": "{quoteId}",
-    "sourceAccountId": "{walletId}",
-    "targetAccountId": "{bankAccountId}",
-    "idempotencyKey": "conv-001"
-  }'
-```
-
-### Payments - Virement intra-devise
-
-```bash
-curl -X POST http://localhost:5000/api/payments/transfer \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fromAccountId": "{accountId}",
-    "toAccountId": "{beneficiaryAccountId}",
-    "currencyCode": "MAD",
-    "amountMinorUnits": 50000,
-    "description": "Paiement facture",
-    "idempotencyKey": "transfer-001"
-  }'
-```
-
-### Payments - Virement cross-devise
-
-```bash
-curl -X POST http://localhost:5000/api/payments/cross-currency-transfer \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fromAccountId": "{madAccountId}",
-    "toAccountId": "{eurAccountId}",
-    "fromCurrencyCode": "MAD",
-    "toCurrencyCode": "EUR",
-    "amountMinorUnits": 100000,
-    "idempotencyKey": "fx-transfer-001"
-  }'
-```
-
-### Payments - Ordre permanent (Standing Order)
-
-```bash
-curl -X POST http://localhost:5000/api/payments/standing-orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fromAccountId": "{accountId}",
-    "toAccountId": "{beneficiaryId}",
-    "currencyCode": "MAD",
-    "amountMinorUnits": 50000,
-    "frequency": "Monthly",
-    "startDate": "2024-02-01T00:00:00Z",
-    "endDate": "2024-12-31T00:00:00Z",
-    "description": "Loyer mensuel"
-  }'
-```
-
-### Banking - Créer un compte épargne
-
-```bash
-curl -X POST http://localhost:5000/api/banking/savings \
-  -H "Content-Type: application/json" \
-  -d '{
-    "partyId": "{partyId}",
-    "currencyCode": "MAD",
-    "interestRate": 0.025,
-    "minimumBalanceMinorUnits": 100000,
-    "initialDepositMinorUnits": 500000
-  }'
-```
-
-### Banking - Calculer les intérêts
-
-```bash
-curl -X POST http://localhost:5000/api/banking/accounts/{savingsAccountId}/calculate-interest
-```
-
-### Banking - Demande de prêt
-
-```bash
-curl -X POST http://localhost:5000/api/banking/loans \
-  -H "Content-Type: application/json" \
-  -d '{
-    "partyId": "{partyId}",
-    "requestedAmountMinorUnits": 5000000,
-    "requestedDurationMonths": 24,
-    "purpose": "Achat équipement",
-    "employmentStatus": "Employed",
-    "monthlyIncomeMinorUnits": 1500000
-  }'
-```
-
-### Banking - Approuver un prêt
-
-```bash
-curl -X POST http://localhost:5000/api/banking/loans/{loanId}/approve \
-  -H "Content-Type: application/json" \
-  -d '{
-    "loanId": "{loanId}",
-    "approved": true,
-    "approvedInterestRate": 0.055,
-    "approvedBy": "manager001"
-  }'
-```
-
-### Banking - Découvert autorisé
-
-```bash
-curl -X POST http://localhost:5000/api/banking/accounts/{accountId}/overdraft \
-  -H "Content-Type: application/json" \
-  -d '{
-    "limitMinorUnits": 100000,
-    "interestRate": 0.08
-  }'
-```
-
-### Wallet - P2P Send
+### Envoi P2P Wallet
 
 ```bash
 curl -X POST http://localhost:5000/api/wallet/p2p/send \
@@ -381,64 +191,11 @@ curl -X POST http://localhost:5000/api/wallet/p2p/send \
     "identifierType": "Phone",
     "currencyCode": "MAD",
     "amountMinorUnits": 25000,
-    "description": "Remboursement déjeuner",
     "idempotencyKey": "p2p-001"
   }'
 ```
 
-### Wallet - Split Payment
-
-```bash
-curl -X POST http://localhost:5000/api/wallet/split \
-  -H "Content-Type: application/json" \
-  -d '{
-    "initiatorWalletId": "{walletId}",
-    "participantIdentifiers": ["+212612345679", "+212612345680"],
-    "currencyCode": "MAD",
-    "totalAmountMinorUnits": 90000,
-    "description": "Dîner entre amis"
-  }'
-```
-
-### Wallet - Redeem Loyalty Points
-
-```bash
-curl -X POST http://localhost:5000/api/wallet/{walletId}/loyalty/redeem \
-  -H "Content-Type: application/json" \
-  -d '500'
-```
-
-### WalletFMCG - Cash-In
-
-```bash
-curl -X POST http://localhost:5000/api/walletfmcg/cash-in \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agentId": "{agentId}",
-    "currencyCode": "MAD",
-    "amountMinorUnits": 50000,
-    "customerWalletId": "{customerWalletId}",
-    "reference": "CI-001",
-    "idempotencyKey": "cashin-001"
-  }'
-```
-
-### WalletFMCG - Calculer commission
-
-```bash
-curl -X POST http://localhost:5000/api/walletfmcg/commissions/calculate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "beneficiaryId": "{agentId}",
-    "beneficiaryType": "Agent",
-    "operationType": "CashIn",
-    "currencyCode": "MAD",
-    "amountMinorUnits": 50000,
-    "originalTransactionId": "{transactionId}"
-  }'
-```
-
-### MerchantPayments - Générer QR EMVCo Dynamique
+### Générer un QR EMVCo
 
 ```bash
 curl -X POST http://localhost:5000/api/merchantpayments/qr/generate \
@@ -447,250 +204,149 @@ curl -X POST http://localhost:5000/api/merchantpayments/qr/generate \
     "merchantId": "{merchantId}",
     "currencyCode": "MAD",
     "amountMinorUnits": 15000,
-    "reference": "CMD-001",
-    "description": "Café + Croissant",
-    "expiresAt": "2024-01-15T14:30:00Z"
+    "reference": "CMD-001"
   }'
 ```
 
-**Réponse (Payload EMVCo):**
-```json
-{
-  "payload": "000201010212150412345104567853035045401015.006002CASABLANCA62400505CMD-0016304A1B2",
-  "payloadFormat": "EMVCo",
-  "payloadLength": 87,
-  "currencyNumericCode": "504",
-  "amount": 150.00,
-  "reference": "CMD-001",
-  "crc": "A1B2"
-}
-```
+→ Tous les endpoints : **[docs/API-REFERENCE.md](./docs/API-REFERENCE.md)**
 
-### MerchantPayments - Payer par QR
+---
 
-```bash
-curl -X POST http://localhost:5000/api/merchantpayments/qr/pay \
-  -H "Content-Type: application/json" \
-  -d '{
-    "qrPayload": "000201010212150412345104567853035045401015.006002CASABLANCA62400505CMD-0016304A1B2",
-    "payerWalletId": "{walletId}",
-    "idempotencyKey": "qrpay-001"
-  }'
-```
+## Sécurité
 
-### Disputes - Remboursement partiel
+| Protection | Implémentation |
+|-----------|---------------|
+| **Authentication** | JWT RSA-2048, access token 15min, refresh 7j avec rotation |
+| **Passwords** | Argon2id (OWASP) |
+| **Data** | AES-256-GCM encryption pour PII |
+| **Cards** | Tokenization PCI-compliant |
+| **MFA** | TOTP compatible Google/Microsoft Authenticator |
+| **Rate Limiting** | 100 req/min global, 5 req/5min auth |
+| **Headers** | CSP, HSTS, X-Frame-Options, X-Content-Type-Options |
 
-```bash
-curl -X POST http://localhost:5000/api/disputes/refund \
-  -H "Content-Type: application/json" \
-  -d '{
-    "originalTransactionId": "{transactionId}",
-    "amountMinorUnits": 5000,
-    "reason": "Produit défectueux",
-    "idempotencyKey": "refund-001"
-  }'
-```
+→ Détails : **[SECURITY.md](./SECURITY.md)**
 
-### Disputes - Initier un chargeback
-
-```bash
-curl -X POST http://localhost:5000/api/disputes/chargeback \
-  -H "Content-Type: application/json" \
-  -d '{
-    "originalTransactionId": "{transactionId}",
-    "reason": "Transaction non autorisée",
-    "evidenceDescription": "Client indique ne pas avoir effectué cette transaction"
-  }'
-```
-
-### Compliance - Action forte (Freeze Party)
-
-```bash
-curl -X POST http://localhost:5000/api/compliance/strong-actions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "actionType": "FreezeParty",
-    "partyId": "{partyId}",
-    "reason": "Suspicion de fraude détectée par le système",
-    "initiatedBy": "fraud-system"
-  }'
-```
-
-### Notifications - Envoyer une notification
-
-```bash
-curl -X POST http://localhost:5000/api/notifications/send \
-  -H "Content-Type: application/json" \
-  -d '{
-    "recipientPartyId": "{partyId}",
-    "notificationType": "Transaction",
-    "channel": "SMS",
-    "subject": "Confirmation de transaction",
-    "body": "Vous avez reçu 500 MAD de Ahmed Benali",
-    "data": { "amount": "500", "currency": "MAD", "sender": "Ahmed Benali" }
-  }'
-```
-
-### Documents - Upload
-
-```bash
-curl -X POST http://localhost:5000/api/documents/upload \
-  -H "Content-Type: multipart/form-data" \
-  -F "partyId={partyId}" \
-  -F "documentType=KYC" \
-  -F "file=@/path/to/document.pdf"
-```
-
-### Budgeting - Définir un budget
-
-```bash
-curl -X POST http://localhost:5000/api/budgeting/budgets \
-  -H "Content-Type: application/json" \
-  -d '{
-    "partyId": "{partyId}",
-    "categoryId": "restaurants",
-    "currencyCode": "MAD",
-    "amountLimitMinorUnits": 200000,
-    "period": "Monthly",
-    "startDate": "2024-01-01T00:00:00Z",
-    "isAlertEnabled": true,
-    "alertThresholdPercentage": 80
-  }'
-```
-
-### Budgeting - Analytics de dépenses
-
-```bash
-curl "http://localhost:5000/api/budgeting/analytics?partyId={partyId}&currencyCode=MAD&fromDate=2024-01-01&toDate=2024-01-31"
-```
-
-## Tests
-
-### Exécuter les tests unitaires
-
-```bash
-dotnet test tests/Finitech.UnitTests
-```
-
-### Exécuter les tests d'architecture
-
-```bash
-dotnet test tests/Finitech.ArchitectureTests
-```
-
-Les tests d'architecture vérifient:
-- ❌ Que Banking ne référence pas Wallet
-- ❌ Que Wallet ne référence pas Banking
-- ✅ Que les modules respectent les dépendances vers Contracts uniquement
-- ✅ Que le Domain ne dépend pas de l'Infrastructure
-
-## Configuration
-
-### appsettings.Development.json
-
-```json
-{
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True",
-    "IdentityConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True",
-    "BankingConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True",
-    "WalletConnection": "Server=localhost;Database=Finitech;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True"
-  },
-  "Jwt": {
-    "Issuer": "Finitech",
-    "Audience": "Finitech.Users",
-    "AccessTokenLifetimeMinutes": 15,
-    "RefreshTokenLifetimeDays": 7
-  },
-  "Encryption": {
-    "MasterKey": "your-32-byte-encryption-key-here!!"
-  },
-  "RateLimiting": {
-    "GlobalLimit": 100,
-    "AuthLimit": 5,
-    "AuthWindow": 5
-  }
-}
-```
+---
 
 ## Multi-Devise
 
-Le système supporte MAD, EUR, USD dès la V1:
+Le système supporte **MAD**, **EUR**, **USD** nativement :
 
-- **Stockage**: Minor units (long) + CurrencyCode (string)
-- **Conversion**: Via module FX avec taux simulés
-- **Ledger**: Une écriture par devise, pas de conversion implicite
-- **EMVCo QR**: Devise numérique ISO 4217 (504=MAD, 978=EUR, 840=USD)
+- Stockage en **minor units** (long) + CurrencyCode (string)
+- Conversion via module FX avec taux simulés (provider-ready pour production)
+- Ledger : une écriture par devise, pas de conversion implicite
+- QR EMVCo : devise numérique ISO 4217 (504=MAD, 978=EUR, 840=USD)
 
-## Fonctionnalités Production-Ready
+---
 
-### ✅ Sécurité Entreprise
-- **JWT Authentication** avec signing RSA-2048
-- **Access tokens** (15 min) + **Refresh tokens** (7 jours) avec rotation
-- **Argon2id** password hashing (OWASP recommended)
-- **AES-256-GCM** encryption pour données sensibles (PII)
-- **Rate limiting**: 100 req/min global, 5 req/5min auth endpoints
-- **Security headers**: CSP, HSTS, X-Frame-Options, etc.
+## Tests
 
-### ✅ Persistence Database
-- **Identity Module**: Users, RefreshTokens, Sessions, Roles, Permissions (EF Core + SQL Server)
-- **Banking Module**: BankAccounts, Cards, Loans avec schéma isolation
-- **Wallet Module**: Wallets, Balances, Transactions, ScheduledPayments
-- **Ledger Module**: Double-entry bookkeeping avec Outbox Pattern
-- **Multi-tenancy ready**: Schémas séparés par module
+```bash
+# Tests unitaires (FX, Disputes, MerchantPayments, Budgeting, Money, Outbox)
+dotnet test tests/Finitech.UnitTests
 
-### ✅ Background Jobs (Quartz.NET)
-- **InterestAccrualJob**: Calcul intérêts quotidien à 2h du matin
-- **ScheduledPaymentJob**: Exécution paiements programmés (toutes les 15 min)
-- **TokenCleanupJob**: Nettoyage tokens expirés à 3h du matin
+# Tests d'architecture (vérifie les dépendances inter-modules)
+dotnet test tests/Finitech.ArchitectureTests
 
-### ✅ Intégrations Externes (Mocks prêts pour prod)
-- **SMS Service**: Interface Twilio (mock pour dev)
-- **Email Service**: Interface SendGrid (mock pour dev)
-- **KYC Provider**: Interface Jumio/Onfido (mock pour dev)
-- **Payment Gateway**: Interface Stripe/Adyen (mock pour dev)
-- **FX Rate Provider**: Avec cache 5 minutes (mock taux ECB)
-- **Document Storage**: S3 avec presigned URLs (local pour dev)
+# Tests d'intégration (nécessite SQL Server)
+docker-compose up -d sqlserver
+dotnet test tests/Finitech.IntegrationTests
+```
 
-### ✅ MFA/2FA & PCI Compliance
-- **TOTP MFA**: Compatible Google/Microsoft Authenticator
-- **Recovery codes**: Génération et validation
-- **Card Tokenization**: PAN tokenization PCI-compliant
-- **Virtual cards**: Support cartes virtuelles
+Les tests d'architecture vérifient automatiquement :
+- ❌ Banking ne référence pas Wallet
+- ❌ Wallet ne référence pas Banking
+- ✅ Modules communiquent via Contracts uniquement
+- ✅ Domain ne dépend pas d'Infrastructure
 
-## Hypothèses et Simplifications
+---
 
-1. **FX Rates**: Taux simulés (fournisseur externe ready)
-2. **EMVCo QR**: Payload simplifié (CRC basique)
-3. **Notifications**: Mock console (fournisseurs ready)
+## Déploiement Kubernetes
 
-## Roadmap Production
+```bash
+# Staging
+kubectl apply -k k8s/overlays/staging
+
+# Production
+kubectl apply -k k8s/overlays/production
+```
+
+Inclut : Deployment, Service, Ingress, ConfigMap, NetworkPolicy, ServiceAccount.
+
+---
+
+## Structure du projet
+
+```
+Finitech/
+├── src/
+│   ├── ApiHost/                    # ASP.NET Core host (controllers, config)
+│   ├── BuildingBlocks/             # Shared kernel (Domain, Application, Infrastructure)
+│   │   ├── Domain/                 # Interfaces, repositories, Result pattern
+│   │   ├── Application/            # CQRS patterns
+│   │   ├── Infrastructure/         # EF Core, JWT, Argon2, AES, Outbox
+│   │   ├── SharedKernel/           # Money, Entity, ValueObject, AggregateRoot
+│   │   └── Contracts/              # DTOs partagés
+│   └── Modules/                    # 18 modules métier
+│       ├── Banking/                # Comptes, prêts, cartes, intérêts
+│       ├── Wallet/                 # P2P, loyalty, paiements programmés
+│       ├── Ledger/                 # Double-entry bookkeeping
+│       ├── Payments/               # Virements intra/cross-devise
+│       ├── FX/                     # Change, quotes, conversion
+│       ├── MerchantPayments/       # QR EMVCo
+│       ├── PartyRegistry/          # Référentiel clients
+│       ├── Identity*/              # Auth JWT + MFA
+│       ├── IdentityCompliance/     # eKYC, AML
+│       └── ...                     # Notifications, Budgeting, Disputes, etc.
+├── tests/
+│   ├── UnitTests/                  # 9 fichiers de tests
+│   ├── ArchitectureTests/          # Tests de dépendances
+│   └── IntegrationTests/           # Tests avec SQL Server
+├── k8s/                            # Kubernetes (Kustomize)
+├── docs/                           # API Reference
+├── docker-compose.yml
+├── CONTRIBUTING.md
+├── SECURITY.md
+└── LICENSE
+```
+
+---
+
+## Roadmap
 
 ### ✅ Complété
-- [x] EF Core DbContext par module (Identity, Banking, Wallet, Ledger)
-- [x] JWT Authentication avec RSA signing + refresh tokens
-- [x] Argon2id password hashing
-- [x] AES-256-GCM data encryption
+- [x] Modular monolith avec 18 modules
+- [x] Ledger double-entry immutable
+- [x] JWT RSA-2048 + MFA/TOTP + refresh rotation
+- [x] Argon2id + AES-256-GCM
+- [x] Multi-devise MAD/EUR/USD
+- [x] QR EMVCo dynamique
 - [x] Background jobs (Quartz.NET)
-- [x] Interfaces providers KYC/KYB/Payment/FX prêtes
-- [x] MFA/2FA avec TOTP
-- [x] Card tokenization PCI-compliant
-- [x] Monitoring (OpenTelemetry + Prometheus)
-- [x] CI/CD GitHub Actions + Docker
+- [x] 9 Application Services
+- [x] Tests unitaires + architecture
+- [x] CI/CD GitHub Actions
+- [x] Docker + Kubernetes
 
-### 🔄 À venir
+### 🔄 Prochaines étapes
 - [ ] Event sourcing pour le Ledger
-- [ ] RabbitMQ/Azure Service Bus pour outbox distribué
-- [ ] Déploiement Kubernetes avec Helm charts
+- [ ] RabbitMQ pour outbox distribué
 - [ ] API Gateway (Kong/Traefik)
-- [ ] Multi-région support
+- [ ] Multi-région
+- [ ] Dashboard admin React
+
+---
+
+## Documentation
+
+| Document | Contenu |
+|----------|---------|
+| [API Reference](./docs/API-REFERENCE.md) | Tous les endpoints (30+ routes) |
+| [Security](./SECURITY.md) | Politique de sécurité et features |
+| [Contributing](./CONTRIBUTING.md) | Setup, conventions, PR process |
+| [Architecture](./ARCHITECTURE.md) | Décisions techniques détaillées |
+
+---
 
 ## Licence
 
-MIT - Ce projet est un exemple éducatif d'architecture .NET.
+MIT — [Khalil Benazzouz](https://github.com/khalilbenaz)
