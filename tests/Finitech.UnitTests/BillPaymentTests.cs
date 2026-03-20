@@ -21,31 +21,47 @@ public class BillPaymentTests
         Assert.False(result.IsValid);
     }
 
-    [Fact]
-    public async Task VerifyBill_EmptyData_Fails()
-    {
-        var result = await _service.VerifyBillAsync("", "", "", 0);
-        Assert.False(result.IsValid);
-    }
-
     [Theory]
     [InlineData("Maroc Telecom")]
     [InlineData("Inwi")]
     [InlineData("Orange")]
     [InlineData("REDAL")]
     [InlineData("LYDEC")]
-    [InlineData("ONEE")]
-    public async Task PayBill_SupportedBillers_AllWork(string billerName)
+    [InlineData("ONEE Eau")]
+    [InlineData("ONEE Électricité")]
+    [InlineData("Amendis Tanger")]
+    [InlineData("Amendis Tétouan")]
+    [InlineData("Maroc Telecom Fibre")]
+    [InlineData("Direction Générale des Impôts")]
+    [InlineData("Trésorerie Générale du Royaume")]
+    public async Task PayBill_AllBillers_Work(string billerName)
     {
         var result = await _service.PayBillAsync(Guid.NewGuid(), billerName, "REF-001", "CUST-001", 500);
         Assert.Equal("Completed", result.Status);
-        Assert.False(string.IsNullOrEmpty(result.TransactionReference));
+        Assert.Equal(billerName, result.BillerName);
     }
 
     [Fact]
-    public void GetSupportedBillers_Returns7()
+    public void GetSupportedBillers_Returns13()
     {
         var billers = _service.GetSupportedBillers();
-        Assert.True(billers.Count >= 7);
+        Assert.Equal(13, billers.Count);
+    }
+
+    [Fact]
+    public void GetBillersByCategory_HasAllCategories()
+    {
+        var categories = _service.GetSupportedBillersByCategory();
+        Assert.True(categories.ContainsKey("Telecom"));
+        Assert.True(categories.ContainsKey("Eau"));
+        Assert.True(categories.ContainsKey("Électricité"));
+        Assert.True(categories.ContainsKey("Taxes & Gouvernement"));
+    }
+
+    [Fact]
+    public async Task VerifyBill_EmptyRef_Fails()
+    {
+        var result = await _service.VerifyBillAsync("Maroc Telecom", "", "CUST-001", 500);
+        Assert.False(result.IsValid);
     }
 }
