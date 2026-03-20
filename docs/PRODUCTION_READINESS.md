@@ -6,7 +6,7 @@ Cette documentation décrit les améliorations apportées pour rendre la solutio
 
 ---
 
-## 1. Entity Framework Core avec SQL Server
+## 1. Entity Framework Core avec PostgreSQL
 
 ### Modules avec Persistence Implémentée
 
@@ -104,7 +104,7 @@ Cette documentation décrit les améliorations apportées pour rendre la solutio
 ### Health Checks
 - `/health/live` : Liveness probe (Kubernetes)
 - `/health/ready` : Readiness probe (vérification DB)
-- SQL Server health check
+- PostgreSQL health check
 - Memory usage monitoring
 
 ### Métriques Prometheus
@@ -249,7 +249,7 @@ k8s/
 
 #### NetworkPolicy
 - Ingress : uniquement depuis ingress-nginx et monitoring
-- Egress : uniquement vers SQL Server, Redis, OTel Collector, DNS
+- Egress : uniquement vers PostgreSQL, Redis, OTel Collector, DNS
 
 #### PodDisruptionBudget
 - minAvailable: 2 (garantit la disponibilité lors des mises à jour)
@@ -295,7 +295,7 @@ k8s/
 - Read-only root filesystem
 
 ### docker-compose.yml
-- SQL Server 2022
+- PostgreSQL 2022
 - Redis 7
 - API avec health checks
 
@@ -307,7 +307,7 @@ k8s/
 - [x] EF Core DbContext par module (Identity, Banking, Wallet, Ledger)
 - [ ] Créer les migrations initiales : `dotnet ef migrations add InitialCreate`
 - [ ] Appliquer les migrations : `dotnet ef database update`
-- [ ] Configurer SQL Server Always Encrypted pour les données sensibles
+- [ ] Configurer PostgreSQL Always Encrypted pour les données sensibles
 - [ ] Mettre en place des backups automatisés
 
 ### Sécurité
@@ -320,7 +320,7 @@ k8s/
 
 ### Background Jobs
 - [x] Quartz.NET scheduler configuré
-- [ ] Persistance Quartz (SQL Server) pour cluster support
+- [ ] Persistance Quartz (PostgreSQL) pour cluster support
 
 ### Monitoring
 - [x] OpenTelemetry tracing et metrics
@@ -413,7 +413,7 @@ dotnet ef database update \
 │  └──────────────────────────────────────────────────────┘  │
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  SQL Server  │  │    Redis     │  │  OTel Collector  │  │
+│  │  PostgreSQL  │  │    Redis     │  │  OTel Collector  │  │
 │  └──────────────┘  └──────────────┘  └──────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
                        │

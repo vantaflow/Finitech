@@ -1,34 +1,21 @@
 namespace Finitech.BuildingBlocks.Domain.Outbox;
 
 /// <summary>
-/// Outbox message for reliable event publishing across modules.
+/// Represents a domain event stored in the outbox table.
+/// Used for reliable event delivery via the Transactional Outbox Pattern.
+/// Events are written to the outbox in the same DB transaction as the domain change,
+/// then published to RabbitMQ by the OutboxProcessor.
 /// </summary>
 public class OutboxMessage
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     public string EventType { get; set; } = string.Empty;
-    public string Payload { get; set; } = string.Empty;
-    public DateTime OccurredAt { get; set; }
-    public DateTime? ProcessedAt { get; set; }
-    public string Status { get; set; } = OutboxMessageStatus.Pending;
+    public string Payload { get; set; } = "{}";
+    public string? AggregateId { get; set; }
+    public string? AggregateType { get; set; }
+    public string Status { get; set; } = "Pending";
     public int RetryCount { get; set; }
-    public string? Error { get; set; }
-    public string? CorrelationId { get; set; }
-}
-
-public static class OutboxMessageStatus
-{
-    public const string Pending = "Pending";
-    public const string Processing = "Processing";
-    public const string Completed = "Completed";
-    public const string Failed = "Failed";
-}
-
-public interface IOutbox
-{
-    Task AddAsync(OutboxMessage message, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<OutboxMessage>> GetPendingMessagesAsync(int batchSize, CancellationToken cancellationToken = default);
-    Task MarkAsProcessedAsync(Guid messageId, CancellationToken cancellationToken = default);
-    Task MarkAsFailedAsync(Guid messageId, string error, CancellationToken cancellationToken = default);
-    Task IncrementRetryAsync(Guid messageId, CancellationToken cancellationToken = default);
+    public string? LastError { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ProcessedAt { get; set; }
 }

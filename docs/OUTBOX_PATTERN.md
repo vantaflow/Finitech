@@ -282,7 +282,7 @@ If you see delays:
 
 ## Future Enhancements
 
-1. **Change Data Capture (CDC)**: Instead of polling, use SQL Server CDC
+1. **Change Data Capture (CDC)**: Instead of polling, use PostgreSQL CDC
 2. **Idempotent Handlers**: Ensure event handlers can safely process duplicates
 3. **Dead Letter Queue**: Separate table for permanently failed messages
 4. **Metrics**: Add Prometheus metrics for outbox operations

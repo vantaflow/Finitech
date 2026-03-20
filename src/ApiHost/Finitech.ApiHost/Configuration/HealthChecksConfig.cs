@@ -12,16 +12,16 @@ public static class HealthChecksConfig
     {
         var healthChecks = services.AddHealthChecks();
 
-        // SQL Server health check
+        // PostgreSQL health check
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         if (!string.IsNullOrEmpty(connectionString))
         {
-            healthChecks.AddSqlServer(
+            healthChecks.AddNpgsql(
                 connectionString,
                 healthQuery: "SELECT 1;",
-                name: "sql-server",
+                name: "postgresql",
                 failureStatus: HealthStatus.Degraded,
-                tags: new[] { "db", "sql" });
+                tags: new[] { "db", "postgresql" });
         }
 
         // Self health check

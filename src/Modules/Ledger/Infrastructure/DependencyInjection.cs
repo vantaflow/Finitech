@@ -22,11 +22,11 @@ public static class DependencyInjection
             var connectionString = configuration.GetConnectionString("LedgerDatabase")
                 ?? configuration.GetConnectionString("DefaultConnection");
 
-            options.UseSqlServer(connectionString, sqlOptions =>
+            options.UseNpgsql(connectionString, npgsqlOptions =>
             {
-                sqlOptions.MigrationsAssembly(typeof(LedgerDbContext).Assembly.FullName);
-                sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "ledger");
-                sqlOptions.EnableRetryOnFailure(
+                npgsqlOptions.MigrationsAssembly(typeof(LedgerDbContext).Assembly.FullName);
+                npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "ledger");
+                npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 5,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorNumbersToAdd: null);

@@ -691,7 +691,7 @@ ENTRYPOINT ["dotnet", "Finitech.ApiHost.dll"]
 ### 7.1 Checklist production
 
 #### Base de données
-- [ ] SQL Server en cluster (Always On)
+- [ ] PostgreSQL en cluster (Always On)
 - [ ] Backup automatique (full + incremental)
 - [ ] Encryption TDE activé
 - [ ] Connection pooling configuré
@@ -773,7 +773,7 @@ spec:
 
 ```csharp
 builder.Services.AddHealthChecks()
-    .AddSqlServer(connectionString)
+    .AddPostgreSQL(connectionString)
     .AddRedis(redisConnection)
     .AddRabbitMQ(rabbitConnection)
     .AddCheck<LedgerHealthCheck>("ledger");

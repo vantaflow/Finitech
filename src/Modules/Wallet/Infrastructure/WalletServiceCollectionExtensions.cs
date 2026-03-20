@@ -16,11 +16,11 @@ public static class WalletServiceCollectionExtensions
 
         services.AddDbContext<WalletDbContext>(options =>
         {
-            options.UseSqlServer(connectionString, sqlOptions =>
+            options.UseNpgsql(connectionString, npgsqlOptions =>
             {
-                sqlOptions.MigrationsAssembly(typeof(WalletDbContext).Assembly.FullName);
-                sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "wallet");
-                sqlOptions.EnableRetryOnFailure(3, TimeSpan.FromSeconds(30), null);
+                npgsqlOptions.MigrationsAssembly(typeof(WalletDbContext).Assembly.FullName);
+                npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "wallet");
+                npgsqlOptions.EnableRetryOnFailure(3, TimeSpan.FromSeconds(30), null);
             });
         });
 

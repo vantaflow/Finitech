@@ -109,7 +109,7 @@ Architecture .NET 8 complète pour une plateforme FinTech couvrant **Banking**, 
 | Composant | Technologie |
 |-----------|-------------|
 | **Runtime** | .NET 8.0 |
-| **Database** | SQL Server 2022 |
+| **Database** | PostgreSQL 2022 |
 | **ORM** | Entity Framework Core + Migrations |
 | **Auth** | JWT RSA-2048 signing |
 | **Passwords** | Argon2id (OWASP recommended) |
@@ -132,10 +132,10 @@ Architecture .NET 8 complète pour une plateforme FinTech couvrant **Banking**, 
 - Docker Desktop
 - .NET 8 SDK
 
-### 1. Démarrer SQL Server
+### 1. Démarrer PostgreSQL
 
 ```bash
-docker-compose up -d sqlserver
+docker-compose up -d postgres
 ```
 
 ### 2. Lancer l'application
@@ -248,8 +248,8 @@ dotnet test tests/Finitech.UnitTests
 # Tests d'architecture (vérifie les dépendances inter-modules)
 dotnet test tests/Finitech.ArchitectureTests
 
-# Tests d'intégration (nécessite SQL Server)
-docker-compose up -d sqlserver
+# Tests d'intégration (nécessite PostgreSQL)
+docker-compose up -d postgres
 dotnet test tests/Finitech.IntegrationTests
 ```
 
@@ -301,7 +301,7 @@ Finitech/
 ├── tests/
 │   ├── UnitTests/                  # 9 fichiers de tests
 │   ├── ArchitectureTests/          # Tests de dépendances
-│   └── IntegrationTests/           # Tests avec SQL Server
+│   └── IntegrationTests/           # Tests avec PostgreSQL
 ├── k8s/                            # Kubernetes (Kustomize)
 ├── docs/                           # API Reference
 ├── docker-compose.yml
@@ -328,9 +328,9 @@ Finitech/
 - [x] Docker + Kubernetes
 
 ### 🔄 Prochaines étapes
-- [ ] Event sourcing pour le Ledger
-- [ ] RabbitMQ pour outbox distribué
-- [ ] API Gateway (Kong/Traefik)
+- [x] Event sourcing pour le Ledger (append-only event store, jsonb)
+- [x] RabbitMQ pour outbox distribué (Transactional Outbox Pattern)
+- [x] API Gateway Traefik v3 (rate limiting, CORS, security headers)
 - [ ] Multi-région
 - [ ] Dashboard admin React
 
@@ -350,3 +350,56 @@ Finitech/
 ## Licence
 
 MIT — [Khalil Benazzouz](https://github.com/khalilbenaz)
+
+---
+
+## Event Sourcing (Ledger)
+
+Le module Ledger utilise l'**Event Sourcing** pour garantir une traçabilité complète :
+
+```
+Domain Event → Outbox Table (même transaction) → RabbitMQ → Consumers
+```
+
+Chaque opération financière est un événement immutable stocké en **PostgreSQL jsonb** :
+
+| Event Type | Description |
+|-----------|-------------|
+| `AccountOpened` | Ouverture de compte |
+| `MoneyDeposited` | Dépôt |
+| `MoneyWithdrawn` | Retrait |
+| `TransferExecuted` | Virement |
+| `InterestAccrued` | Intérêts calculés |
+| `FxConversionExecuted` | Conversion de devise |
+| `RefundProcessed` | Remboursement |
+| `ChargebackInitiated` | Chargeback |
+
+L'état d'un compte peut être reconstruit à tout moment en rejouant ses événements.
+
+---
+
+## API Gateway (Traefik)
+
+```bash
+# Lancer avec le gateway
+docker-compose -f docker-compose.yml -f gateway/docker-compose.gateway.yml up
+```
+
+Fonctionnalités :
+- Rate limiting (100 req/min)
+- CORS configuré
+- Security headers (HSTS, CSP, X-Frame-Options)
+- Dashboard : `http://localhost:8080`
+
+---
+
+## Message Broker (RabbitMQ)
+
+Le **Transactional Outbox Pattern** garantit la livraison fiable des événements :
+
+1. L'événement est écrit dans la table `outbox` dans la **même transaction** que le changement
+2. Le `OutboxProcessor` (background job) lit les messages pending
+3. Publication vers RabbitMQ avec retry automatique (max 5 tentatives)
+4. Marquage comme `Published` après succès
+
+Dashboard RabbitMQ : `http://localhost:15672` (finitech/finitech)

@@ -6,14 +6,14 @@ Merci de votre intérêt pour Finitech ! Voici comment contribuer.
 
 - .NET 8.0 SDK
 - Docker Desktop
-- SQL Server 2022 (via Docker)
+- PostgreSQL 2022 (via Docker)
 
 ## Setup local
 
 ```bash
 git clone https://github.com/khalilbenaz/Finitech.git
 cd Finitech
-docker-compose up -d sqlserver
+docker-compose up -d postgres
 dotnet restore
 dotnet build
 dotnet test

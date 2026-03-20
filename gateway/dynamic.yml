@@ -1,0 +1,61 @@
+http:
+  routers:
+    finitech-api:
+      rule: "Host(`api.finitech.local`) || PathPrefix(`/api`)"
+      service: finitech-api
+      entryPoints:
+        - web
+      middlewares:
+        - rate-limit
+        - cors
+        - security-headers
+
+    rabbitmq-dashboard:
+      rule: "Host(`rabbitmq.finitech.local`)"
+      service: rabbitmq
+      entryPoints:
+        - web
+
+  services:
+    finitech-api:
+      loadBalancer:
+        servers:
+          - url: "http://api:8080"
+
+    rabbitmq:
+      loadBalancer:
+        servers:
+          - url: "http://rabbitmq:15672"
+
+  middlewares:
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1m
+
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 86400
+
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        contentTypeNosniff: true
+        frameDeny: true
+        browserXssFilter: true
+        contentSecurityPolicy: "default-src 'self'"

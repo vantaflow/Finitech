@@ -29,7 +29,7 @@ spec:
         - namespaceSelector: {}
           podSelector:
             matchLabels:
-              app: sql-server
+              app: postgresql
       ports:
         - protocol: TCP
           port: 1433

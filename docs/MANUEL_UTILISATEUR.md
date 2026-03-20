@@ -66,8 +66,8 @@ Finitech est une plateforme FinTech complète qui combine :
 # 1. Démarrer tous les services
 docker-compose up -d
 
-# 2. Vérifier que SQL Server est prêt
-docker logs finitech-sqlserver
+# 2. Vérifier que PostgreSQL est prêt
+docker logs finitech-postgres
 
 # 3. Accéder à l'API
 # API : http://localhost:5000
@@ -77,8 +77,8 @@ docker logs finitech-sqlserver
 #### En local (Développement)
 
 ```bash
-# 1. SQL Server doit être démarré
-docker-compose up -d sqlserver
+# 1. PostgreSQL doit être démarré
+docker-compose up -d postgres
 
 # 2. Lancer l'API
 dotnet run --project src/ApiHost/Finitech.ApiHost

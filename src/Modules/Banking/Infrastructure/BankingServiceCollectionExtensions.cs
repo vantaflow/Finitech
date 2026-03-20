@@ -16,11 +16,11 @@ public static class BankingServiceCollectionExtensions
 
         services.AddDbContext<BankingDbContext>(options =>
         {
-            options.UseSqlServer(connectionString, sqlOptions =>
+            options.UseNpgsql(connectionString, npgsqlOptions =>
             {
-                sqlOptions.MigrationsAssembly(typeof(BankingDbContext).Assembly.FullName);
-                sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "banking");
-                sqlOptions.EnableRetryOnFailure(3, TimeSpan.FromSeconds(30), null);
+                npgsqlOptions.MigrationsAssembly(typeof(BankingDbContext).Assembly.FullName);
+                npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "banking");
+                npgsqlOptions.EnableRetryOnFailure(3, TimeSpan.FromSeconds(30), null);
             });
 
             if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")

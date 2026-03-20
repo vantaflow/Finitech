@@ -17,11 +17,11 @@ public static class IdentityServiceCollectionExtensions
 
         services.AddDbContext<IdentityDbContext>(options =>
         {
-            options.UseSqlServer(connectionString, sqlOptions =>
+            options.UseNpgsql(connectionString, npgsqlOptions =>
             {
-                sqlOptions.MigrationsAssembly(typeof(IdentityDbContext).Assembly.FullName);
-                sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "identity");
-                sqlOptions.EnableRetryOnFailure(
+                npgsqlOptions.MigrationsAssembly(typeof(IdentityDbContext).Assembly.FullName);
+                npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "identity");
+                npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 3,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorNumbersToAdd: null);
