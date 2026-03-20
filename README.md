@@ -76,7 +76,7 @@ Architecture .NET 8 complète pour une plateforme FinTech couvrant **Banking**, 
 | **Ledger** | Source de vérité financière | Double-entry bookkeeping, multi-devise, outbox pattern, historique immutable |
 | **Identity** | Authentification | JWT RSA-2048, refresh tokens avec rotation, MFA/TOTP, sessions |
 | **Banking** | Comptes bancaires | Comptes épargne, prêts, découvert, calcul d'intérêts, cartes |
-| **Wallet** | Portefeuille digital | P2P transfers, split payments, loyalty points, paiements programmés |
+| **Wallet** | Portefeuille digital | P2P, split payments, loyalty, **Orange Money/Inwi Money**, **paiement factures**, **KYC 4 niveaux**, **offres/promotions**, **détection fraude** |
 | **PartyRegistry** | Référentiel clients | Parties (Individual/Organization), rôles multi-domaines |
 
 ### Services — Application Layer 🟡
@@ -312,6 +312,44 @@ Finitech/
 
 ---
 
+
+## 💳 Wallet — Fonctionnalités ZOUZ (fusionnées)
+
+Le module Wallet intègre désormais toutes les fonctionnalités de ZOUZ.Wallet :
+
+### Méthodes de paiement marocaines
+| Méthode | Provider |
+|---------|----------|
+| Carte bancaire | Payment Gateway |
+| Virement bancaire | Bank Transfer API |
+| **Orange Money** | `api.orangemoney.ma` |
+| **Inwi Money** | `api.inwimoney.ma` |
+| Cash (via agent) | En agence |
+
+### Paiement de factures
+| Type | Fournisseurs |
+|------|-------------|
+| Télécom | Maroc Telecom, Inwi, Orange |
+| Eau | REDAL, LYDEC |
+| Électricité | ONEE |
+| Taxes | Direction Générale des Impôts |
+
+### KYC 4 niveaux (Bank Al-Maghrib)
+| Niveau | Vérification | Limite/jour | Limite/mois |
+|--------|-------------|-------------|-------------|
+| None | Aucune | 0 MAD | 0 MAD |
+| Basic | Téléphone + Email | 2,000 MAD | 10,000 MAD |
+| Standard | CIN (Carte d'Identité Nationale) | 10,000 MAD | 50,000 MAD |
+| Advanced | Vérification complète | 20,000 MAD | 100,000 MAD |
+
+### Offres & Promotions (5 types)
+Cashback · Réduction de frais · Bonus recharge · Programme fidélité · Promotions spéciales
+
+### Détection de fraude
+Règles basées sur les seuils Bank Al-Maghrib : dépôts >10,000 MAD, retraits >5,000 MAD, transferts >7,000 MAD, cash >5,000 MAD.
+
+---
+
 ## Roadmap
 
 ### ✅ Complété
@@ -332,6 +370,7 @@ Finitech/
 - [x] RabbitMQ pour outbox distribué (Transactional Outbox Pattern)
 - [x] API Gateway Traefik v3 (rate limiting, CORS, security headers)
 - [ ] Multi-région
+- [x] Fusion ZOUZ.Wallet — KYC, factures, offres, fraude, Orange/Inwi Money
 - [ ] Dashboard admin React
 
 ---
