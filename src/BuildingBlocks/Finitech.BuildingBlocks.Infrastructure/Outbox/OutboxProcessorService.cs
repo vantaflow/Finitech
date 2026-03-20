@@ -104,7 +104,7 @@ public class OutboxProcessorService<TContext> : BackgroundService where TContext
             }
 
             // Publish the event
-            await eventPublisher.PublishAsync(domainEvent, cancellationToken);
+            await eventPublisher.PublishAsync(message);
 
             // Mark as processed
             await outbox.MarkAsProcessedAsync(message.Id, cancellationToken);

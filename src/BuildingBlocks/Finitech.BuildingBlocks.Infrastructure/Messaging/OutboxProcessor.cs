@@ -3,50 +3,30 @@ using Finitech.BuildingBlocks.Domain.Outbox;
 namespace Finitech.BuildingBlocks.Infrastructure.Messaging;
 
 /// <summary>
-/// Background service that processes the outbox table.
-/// Picks up unpublished events and sends them to RabbitMQ.
-/// Implements the Transactional Outbox Pattern for reliable messaging.
+/// Processes outbox messages and publishes them to RabbitMQ.
+/// Called by OutboxProcessorService on a timer.
 /// </summary>
-public class OutboxProcessor
+public class RabbitMqOutboxProcessor
 {
     private readonly IEventPublisher _publisher;
 
-    public OutboxProcessor(IEventPublisher publisher)
-    {
-        _publisher = publisher;
-    }
+    public RabbitMqOutboxProcessor(IEventPublisher publisher) => _publisher = publisher;
 
-    /// <summary>
-    /// Process pending outbox messages.
-    /// Called by a Quartz.NET job or hosted service on a timer.
-    /// </summary>
-    public async Task ProcessPendingAsync(IOutboxRepository repository, int batchSize = 50)
+    public async Task ProcessPendingAsync(IOutbox outbox, int batchSize = 50)
     {
-        var pending = await repository.GetPendingAsync(batchSize);
+        var pending = await outbox.GetPendingMessagesAsync(batchSize);
 
         foreach (var message in pending)
         {
             try
             {
                 await _publisher.PublishAsync(message);
-                message.ProcessedAt = DateTime.UtcNow;
-                message.Status = "Published";
-                await repository.MarkAsProcessedAsync(message.Id);
+                await outbox.MarkAsProcessedAsync(message.Id);
             }
             catch (Exception ex)
             {
-                message.RetryCount++;
-                message.LastError = ex.Message;
-                message.Status = message.RetryCount >= 5 ? "Failed" : "Pending";
-                await repository.UpdateAsync(message);
+                await outbox.MarkAsFailedAsync(message.Id, ex.Message);
             }
         }
     }
-}
-
-public interface IOutboxRepository
-{
-    Task<List<OutboxMessage>> GetPendingAsync(int batchSize);
-    Task MarkAsProcessedAsync(Guid messageId);
-    Task UpdateAsync(OutboxMessage message);
 }

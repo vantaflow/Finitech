@@ -1,11 +1,13 @@
 namespace Finitech.BuildingBlocks.Domain.Outbox;
 
-/// <summary>
-/// Represents a domain event stored in the outbox table.
-/// Used for reliable event delivery via the Transactional Outbox Pattern.
-/// Events are written to the outbox in the same DB transaction as the domain change,
-/// then published to RabbitMQ by the OutboxProcessor.
-/// </summary>
+public enum OutboxMessageStatus
+{
+    Pending,
+    Processing,
+    Completed,
+    Failed
+}
+
 public class OutboxMessage
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -13,9 +15,10 @@ public class OutboxMessage
     public string Payload { get; set; } = "{}";
     public string? AggregateId { get; set; }
     public string? AggregateType { get; set; }
-    public string Status { get; set; } = "Pending";
+    public OutboxMessageStatus Status { get; set; } = OutboxMessageStatus.Pending;
     public int RetryCount { get; set; }
-    public string? LastError { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? Error { get; set; }
+    public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
+    public string? CorrelationId { get; set; }
     public DateTime? ProcessedAt { get; set; }
 }

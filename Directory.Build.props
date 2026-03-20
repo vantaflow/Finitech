@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Allow NuGet to resolve transitive dependency versions automatically -->
+    <NoWarn>$(NoWarn);NU1605</NoWarn>
+  </PropertyGroup>
+</Project>

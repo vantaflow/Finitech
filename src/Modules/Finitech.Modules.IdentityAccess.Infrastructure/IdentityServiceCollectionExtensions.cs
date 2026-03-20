@@ -23,8 +23,8 @@ public static class IdentityServiceCollectionExtensions
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "identity");
                 npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(30),
-                    errorNumbersToAdd: null);
+                    maxRetryDelay: TimeSpan.FromSeconds(30)
+                    );
             });
 
             // Enable detailed errors in development
