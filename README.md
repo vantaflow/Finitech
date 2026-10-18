@@ -1,6 +1,6 @@
 # Finitech — FinTech Platform Architecture
 
-[![CI](https://github.com/khalilbenaz/Finitech/actions/workflows/ci.yml/badge.svg)](https://github.com/khalilbenaz/Finitech/actions/workflows/ci.yml)
+[![CI](https://github.com/vantaflow/Finitech/actions/workflows/ci.yml/badge.svg)](https://github.com/vantaflow/Finitech/actions/workflows/ci.yml)
 [![.NET](https://img.shields.io/badge/.NET-8.0-purple)](https://dotnet.microsoft.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Modules](https://img.shields.io/badge/modules-18-blue)]()
@@ -388,7 +388,7 @@ Règles basées sur les seuils Bank Al-Maghrib : dépôts >10,000 MAD, retraits 
 
 ## Licence
 
-MIT — [Khalil Benazzouz](https://github.com/khalilbenaz)
+MIT — [vantaflow](https://github.com/vantaflow)
 
 ---
 

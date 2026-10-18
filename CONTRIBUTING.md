@@ -11,7 +11,7 @@ Merci de votre intérêt pour Finitech ! Voici comment contribuer.
 ## Setup local
 
 ```bash
-git clone https://github.com/khalilbenaz/Finitech.git
+git clone https://github.com/vantaflow/Finitech.git
 cd Finitech
 docker-compose up -d postgres
 dotnet restore
