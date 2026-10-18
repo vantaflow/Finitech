@@ -1,3 +1,4 @@
+using Npgsql;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -40,10 +41,7 @@ public static class OpenTelemetryConfig
                     {
                         options.RecordException = true;
                     })
-                    .AddSqlClientInstrumentation(options =>
-                    {
-                        options.RecordException = true;
-                    })
+                    .AddNpgsql()
                     .AddSource("Finitech.Modules.*")
                     .SetSampler(new ParentBasedSampler(
                         new TraceIdRatioBasedSampler(

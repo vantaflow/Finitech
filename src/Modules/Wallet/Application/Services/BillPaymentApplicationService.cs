@@ -26,10 +26,10 @@ public class BillPaymentApplicationService
             ["Amendis Tanger"] = new UtilityBillProvider("Amendis Tanger", "Eau", "api.amendis.ma/tanger"),
             ["Amendis Tétouan"] = new UtilityBillProvider("Amendis Tétouan", "Eau", "api.amendis.ma/tetouan"),
             // Taxes & Gouvernement
-            ["Direction Générale des Impôts"] = new GovernmentBillProvider("DGI", "api.tax.gov.ma"),
-            ["Trésorerie Générale du Royaume"] = new GovernmentBillProvider("TGR", "api.tgr.gov.ma"),
+            ["Direction Générale des Impôts"] = new GovernmentBillProvider("Direction Générale des Impôts", "api.tax.gov.ma"),
+            ["Trésorerie Générale du Royaume"] = new GovernmentBillProvider("Trésorerie Générale du Royaume", "api.tgr.gov.ma"),
             // Internet & TV
-            ["Maroc Telecom Fibre"] = new TelecomBillProvider("MT Fibre", "api.iam.ma/fibre"),
+            ["Maroc Telecom Fibre"] = new TelecomBillProvider("Maroc Telecom Fibre", "api.iam.ma/fibre"),
             ["Inwi Fibre"] = new TelecomBillProvider("Inwi Fibre", "api.inwi.ma/fibre"),
         };
     }

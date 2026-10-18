@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\Finitech.Modules.FX.Domain.csproj" />
+    <ProjectReference Include="..\Contracts\Finitech.Modules.FX.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>

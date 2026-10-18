@@ -16,9 +16,8 @@ public static class HealthChecksConfig
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         if (!string.IsNullOrEmpty(connectionString))
         {
-            healthChecks.AddNpgsql(
+            healthChecks.AddNpgSql(
                 connectionString,
-                healthQuery: "SELECT 1;",
                 name: "postgresql",
                 failureStatus: HealthStatus.Degraded,
                 tags: new[] { "db", "postgresql" });
